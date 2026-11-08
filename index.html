@@ -1,0 +1,655 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Blue Mesa Water Report</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500&family=Source+Sans+3:wght@400;600;700&display=swap">
+<style>
+  body { margin: 0; }
+
+  /* Layout: one reading column (max 72rem), a status band up top (gauge + takeaway),
+     two rows of question cards, then the charts. Lake-water blue on cool paper. */
+  :root {
+    --bg: #f4f6f8;
+    --panel: #ffffff;
+    --ink: #0f1a24;
+    --ink-2: #4a5663;
+    --ink-3: #7b8794;
+    --line: #dde3e9;
+    --line-2: #eef1f4;
+    --water: #1d6fa3;
+    --water-deep: #134f78;
+    --water-wash: rgba(29, 111, 163, 0.10);
+    --rust: #c75d2c;
+    --low: #c0392b;
+    --low-wash: rgba(192, 57, 43, 0.08);
+    --muted-bar: #c9d2db;
+    --grid: #e6ebf0;
+    --axis: #b6c0ca;
+    --tip-bg: #ffffff;
+    --shadow: 0 6px 24px rgba(15, 26, 36, 0.10);
+    --display: "Fraunces", "Iowan Old Style", Georgia, serif;
+    --sans: "Source Sans 3", "Helvetica Neue", Arial, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --bg: #0f151b; --panel: #161e26; --ink: #eef2f5; --ink-2: #b2bcc6; --ink-3: #7f8b97;
+      --line: #27313b; --line-2: #1f2832; --water: #3b93cf; --water-deep: #6fb3e0;
+      --water-wash: rgba(59, 147, 207, 0.16); --rust: #d8703e; --low: #e66767;
+      --low-wash: rgba(230, 103, 103, 0.10); --muted-bar: #3a4753; --grid: #222c36; --axis: #3f4b57;
+      --tip-bg: #1d2630; --shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #0f151b; --panel: #161e26; --ink: #eef2f5; --ink-2: #b2bcc6; --ink-3: #7f8b97;
+    --line: #27313b; --line-2: #1f2832; --water: #3b93cf; --water-deep: #6fb3e0;
+    --water-wash: rgba(59, 147, 207, 0.16); --rust: #d8703e; --low: #e66767;
+    --low-wash: rgba(230, 103, 103, 0.10); --muted-bar: #3a4753; --grid: #222c36; --axis: #3f4b57;
+    --tip-bg: #1d2630; --shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+  }
+
+  body { background: var(--bg); color: var(--ink); font-family: var(--sans); font-size: 16px; line-height: 1.5; }
+  .wrap { max-width: 72rem; margin-inline: auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 28px 56px; display: flex; flex-direction: column; gap: 40px; }
+  .num { font-variant-numeric: tabular-nums; }
+  h1, h2, h3 { margin: 0; text-wrap: balance; }
+  p { margin: 0; }
+  b { font-weight: 600; color: var(--ink); }
+  a { color: var(--water); }
+
+  /* Masthead */
+  .mast { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 24px; padding-bottom: 16px; border-bottom: 1px solid var(--line); }
+  .mast h1 { font-family: var(--display); font-weight: 400; font-size: clamp(1.9rem, 3.4vw, 2.6rem); line-height: 1.05; letter-spacing: -0.01em; }
+  .mast .sub { color: var(--ink-2); font-size: 0.95rem; margin-top: 6px; }
+  .mast .meta { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 0.8rem; color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.06em; }
+  .mast .meta b { color: var(--ink-2); font-weight: 600; }
+
+  /* Status band */
+  .status { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 32px; align-items: stretch; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 28px; box-shadow: var(--shadow); }
+  @media (max-width: 760px) { .status { grid-template-columns: 1fr; padding: 20px; } }
+  .status .lede { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+  .kicker { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-3); font-weight: 600; }
+  .lede h2 { font-family: var(--display); font-weight: 400; font-size: clamp(1.5rem, 2.6vw, 2.1rem); line-height: 1.2; }
+  .lede h2 .num { font-variant-numeric: lining-nums tabular-nums; }
+  .lede p { color: var(--ink-2); max-width: 60ch; }
+  .lede .flag { display: inline-flex; align-items: center; gap: 8px; align-self: flex-start; padding: 6px 12px; border-radius: 999px; background: var(--low-wash); color: var(--low); font-weight: 600; font-size: 0.85rem; }
+  .lede .flag::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--low); }
+  .gauge { display: grid; grid-template-columns: auto 1fr; gap: 20px; align-items: stretch; min-width: 0; }
+  .gauge svg { display: block; height: 100%; min-height: 220px; width: 92px; overflow: visible; }
+  .gauge .scale { position: relative; font-size: 0.85rem; color: var(--ink-2); min-width: 0; min-height: 220px; }
+  .gauge .scale div { position: absolute; left: 0; display: flex; flex-direction: column; gap: 1px; line-height: 1.25; }
+  .gauge .scale .hi { top: 0; }
+  .gauge .scale .lo { bottom: 0; }
+  .gauge .scale .now { transform: translateY(-100%); }
+  .gauge .scale .v { font-weight: 600; color: var(--ink); }
+  .gauge .scale .now .v { color: var(--water); font-size: 1.05rem; }
+  .gauge .scale .lo .v { color: var(--low); }
+  .gauge .scale small { color: var(--ink-3); font-size: 0.78rem; }
+
+  /* Question cards */
+  .section { display: flex; flex-direction: column; gap: 16px; }
+  .section-head { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+  .section-head h2 { font-family: var(--display); font-weight: 400; font-size: 1.45rem; }
+  .section-head p { color: var(--ink-3); font-size: 0.9rem; }
+  .cards { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+  @media (max-width: 960px) { .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (max-width: 520px) { .cards { grid-template-columns: 1fr; } }
+  .card { background: var(--panel); padding: 20px 22px 22px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+  .card .q { font-size: 0.92rem; color: var(--ink-2); font-weight: 600; }
+  .card .a { font-family: var(--display); font-weight: 400; font-size: 2.1rem; line-height: 1.05; letter-spacing: -0.01em; font-variant-numeric: lining-nums tabular-nums; }
+  .card .a small { font-family: var(--sans); font-size: 0.85rem; color: var(--ink-3); font-weight: 400; margin-left: 6px; letter-spacing: 0; }
+  .card .a.low { color: var(--low); }
+  .card .a.ok { color: var(--water); }
+  .card .why { font-size: 0.9rem; color: var(--ink-2); line-height: 1.5; }
+  .card .why b { font-weight: 600; }
+
+  /* Charts */
+  .charts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+  @media (max-width: 900px) { .charts { grid-template-columns: 1fr; } }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 22px 22px 18px; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+  .panel.wide { grid-column: 1 / -1; }
+  .panel-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: 10px 20px; }
+  .panel h3 { font-size: 1.08rem; font-weight: 600; }
+  .panel .desc { color: var(--ink-3); font-size: 0.88rem; margin-top: 2px; max-width: 64ch; }
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 0.82rem; color: var(--ink-2); align-items: center; }
+  .legend span { display: inline-flex; align-items: center; gap: 7px; }
+  .sw { width: 12px; height: 12px; border-radius: 3px; background: var(--muted-bar); display: inline-block; flex: none; }
+  .sw.water { background: var(--water); }
+  .sw.rust { background: var(--rust); }
+  .sw.line { height: 2px; width: 16px; border-radius: 1px; }
+  .sw.dash { height: 0; width: 16px; border-top: 2px dashed var(--ink-3); background: none; border-radius: 0; }
+  .sw.low { border-top-color: var(--low); }
+  .sw.open { background: none; border: 1.5px dashed var(--axis); }
+  .sw.faint { background: var(--axis); opacity: 0.6; }
+  .kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  @media (max-width: 760px) { .kpis { grid-template-columns: 1fr; } }
+  .kpi { background: var(--panel); padding: 20px 24px 22px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+  .kpi .q { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.07em; color: var(--ink-3); font-weight: 600; }
+  .kpi .a { font-family: var(--display); font-weight: 400; font-size: 2.4rem; line-height: 1.05; letter-spacing: -0.01em; font-variant-numeric: lining-nums tabular-nums; }
+  .kpi .a small { font-family: var(--sans); font-size: 0.9rem; color: var(--ink-3); margin-left: 6px; letter-spacing: 0; }
+  .kpi .d { font-size: 0.92rem; color: var(--ink-2); }
+  .kpi .d b { font-weight: 600; }
+  .kpi .d b.down { color: var(--low); }
+  .kpi .d b.up { color: var(--water); }
+  .chart text.rusttext { fill: var(--rust); font-weight: 600; paint-order: stroke; stroke: var(--panel); stroke-width: 4px; stroke-linejoin: round; }
+  .chart text.watertext { fill: var(--water); font-weight: 600; paint-order: stroke; stroke: var(--panel); stroke-width: 4px; stroke-linejoin: round; }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+  .seg button { font: inherit; font-size: 0.82rem; font-weight: 600; padding: 5px 12px; background: transparent; color: var(--ink-3); border: 0; cursor: pointer; }
+  .seg button + button { border-left: 1px solid var(--line); }
+  .seg button[aria-pressed="true"] { background: var(--water-wash); color: var(--water); }
+  .seg button:focus-visible, .sort:focus-visible { outline: 2px solid var(--water); outline-offset: -2px; }
+  .chart { position: relative; min-height: 300px; }
+  .chart.short { min-height: 260px; }
+  .chart svg { display: block; overflow: visible; width: 100%; }
+  .chart text { fill: var(--ink-3); font-family: var(--sans); font-size: 12px; font-variant-numeric: tabular-nums; }
+  .chart text.strong { fill: var(--ink); font-weight: 600; paint-order: stroke; stroke: var(--panel); stroke-width: 4px; stroke-linejoin: round; }
+  .chart text.lowtext { fill: var(--low); font-weight: 600; }
+  .tip { position: absolute; top: 0; left: 0; pointer-events: none; background: var(--tip-bg); border: 1px solid var(--line); border-radius: 8px; box-shadow: var(--shadow); padding: 8px 10px; font-size: 0.82rem; white-space: nowrap; z-index: 2; color: var(--ink); }
+  .tip .h { color: var(--ink-3); margin-bottom: 3px; }
+  .tip .r { display: flex; align-items: center; gap: 7px; }
+  .tip .r b { font-weight: 600; }
+
+  /* Table */
+  .tablebox { max-height: 26rem; overflow: auto; border: 1px solid var(--line-2); border-radius: 8px; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.88rem; font-variant-numeric: tabular-nums; }
+  th { position: sticky; top: 0; background: var(--panel); text-align: right; border-bottom: 1px solid var(--line); padding: 0; z-index: 1; }
+  th:first-child, td:first-child { text-align: left; }
+  .sort { font: inherit; font-weight: 600; color: var(--ink-2); background: none; border: 0; padding: 9px 12px; cursor: pointer; width: 100%; text-align: inherit; white-space: nowrap; }
+  .sort::after { content: ""; display: inline-block; width: 1ch; margin-left: 4px; }
+  th[aria-sort="ascending"] .sort::after { content: "\2191"; }
+  th[aria-sort="descending"] .sort::after { content: "\2193"; }
+  th[aria-sort] .sort { color: var(--ink); }
+  td { padding: 8px 12px; text-align: right; border-bottom: 1px solid var(--line-2); white-space: nowrap; color: var(--ink-2); }
+  td:first-child { color: var(--ink); font-weight: 600; }
+  tr.partial td { font-style: italic; }
+  tr.hi td:first-child::after { content: " ▲"; color: var(--water); font-size: 0.7em; }
+  tr.lo td:first-child::after { content: " ▼"; color: var(--low); font-size: 0.7em; }
+  .cell { display: flex; align-items: center; justify-content: flex-end; gap: 10px; }
+  .barwrap { flex: 0 0 7rem; display: flex; }
+  .bar { display: inline-block; height: 6px; border-radius: 3px; background: var(--muted-bar); }
+  .bar.hi { background: var(--water); }
+  @media (max-width: 560px) { .narrow-hide { display: none; } .barwrap { flex-basis: 3.5rem; } }
+
+  /* Notes */
+  .notes { border-top: 1px solid var(--line); padding-top: 20px; }
+  .notes summary { cursor: pointer; font-weight: 600; color: var(--ink-2); }
+  .notes dl { display: grid; grid-template-columns: minmax(8rem, max-content) 1fr; gap: 8px 20px; font-size: 0.9rem; margin: 16px 0 0; }
+  .notes dt { font-weight: 600; }
+  .notes dd { margin: 0; color: var(--ink-2); max-width: 70ch; }
+  @media (max-width: 560px) { .notes dl { grid-template-columns: 1fr; } .notes dd { margin-bottom: 8px; } }
+  @media (prefers-reduced-motion: no-preference) {
+    .gauge .fill { transition: height 900ms cubic-bezier(.2,.7,.2,1), y 900ms cubic-bezier(.2,.7,.2,1); }
+  }
+</style>
+</head>
+<body>
+
+
+<div class="wrap">
+  <header class="mast">
+    <div>
+      <h1>Blue Mesa Reservoir</h1>
+      <p class="sub">How much water is in Colorado's largest lake, and how much the dam is letting out.</p>
+    </div>
+    <div class="meta">
+      <span>Data through <b id="m-asof">—</b></span>
+      <span>Records since <b id="m-since">—</b></span>
+      <span>Source <b>U.S. Bureau of Reclamation</b></span>
+    </div>
+  </header>
+
+  <section class="status" aria-label="Current status">
+    <div class="lede">
+      <span class="kicker">Right now</span>
+      <h2 id="lede-h">—</h2>
+      <p id="lede-p">—</p>
+      <span class="flag" id="lede-flag" hidden>—</span>
+    </div>
+    <div class="gauge" aria-label="How full the lake is">
+      <svg id="gauge" viewBox="0 0 92 240" role="img" aria-label="Gauge of lake storage against its record high and low"></svg>
+      <div class="scale">
+        <div class="hi"><span class="v num" id="g-hi">—</span><small id="g-hi-l">Fullest ever</small></div>
+        <div class="now"><span class="v num" id="g-now">—</span><small id="g-now-l">Today</small></div>
+        <div class="lo"><span class="v num" id="g-lo">—</span><small id="g-lo-l">Lowest ever</small></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="cards kpis" id="kpis" aria-label="Key figures"></section>
+
+  <section class="charts">
+    <article class="panel wide" id="p-storage">
+      <div class="panel-head">
+        <div>
+          <h3>Has the lake ever been this low?</h3>
+          <p class="desc">Water in the lake since 1968, in acre-feet. The line marks today's level: before this year it never dropped below it.</p>
+        </div>
+        <div class="legend">
+          <span><i class="sw dash"></i>Today's level</span>
+          <span><i class="sw dash low"></i>All-time low</span>
+          <span class="seg" role="group" aria-label="Time period">
+            <button type="button" class="period" data-period="all" aria-pressed="true">All years</button>
+            <button type="button" class="period" data-period="20" aria-pressed="false">20 years</button>
+            <button type="button" class="period" data-period="5" aria-pressed="false">5 years</button>
+          </span>
+        </div>
+      </div>
+      <div class="chart" id="c-storage"></div>
+    </article>
+
+    <article class="panel wide" id="p-years">
+      <div class="panel-head">
+        <div>
+          <h3>How does this year compare with every other year?</h3>
+          <p class="desc">Each gray line is one year's water level, January to December. Hover a line to see its year.</p>
+        </div>
+        <div class="legend">
+          <span><i class="sw line water"></i><span id="lg-y-this">—</span></span>
+          <span><i class="sw line rust"></i><span id="lg-y-close">—</span></span>
+          <span><i class="sw dash"></i>Typical year</span>
+          <span><i class="sw line faint"></i>All other years</span>
+        </div>
+      </div>
+      <div class="chart" id="c-years"></div>
+    </article>
+
+    <article class="panel wide" id="p-annual">
+      <div class="panel-head">
+        <div>
+          <h3>Which years released the most and least water?</h3>
+          <p class="desc">Total let out of the dam each calendar year, in acre-feet. The last bar is this year so far.</p>
+        </div>
+        <div class="legend">
+          <span><i class="sw water"></i>Above normal</span>
+          <span><i class="sw"></i>Below normal</span>
+          <span><i class="sw open"></i>This year so far</span>
+          <span><i class="sw dash"></i>Normal year</span>
+        </div>
+      </div>
+      <div class="chart" id="c-annual"></div>
+    </article>
+
+    <article class="panel" id="p-seasonal">
+      <div class="panel-head">
+        <div>
+          <h3>When the water goes out</h3>
+          <p class="desc">Average release rate by month, in cubic feet per second (cfs).</p>
+        </div>
+      </div>
+      <div class="legend" id="seasonal-legend">
+        <span><i class="sw"></i>Normal</span>
+        <span><i class="sw line water"></i><span id="lg-this">—</span></span>
+        <span><i class="sw line rust"></i><span id="lg-last">—</span></span>
+      </div>
+      <div class="chart short" id="c-seasonal"></div>
+    </article>
+
+    <article class="panel" id="p-table">
+      <div class="panel-head">
+        <div>
+          <h3>Every year on record</h3>
+          <p class="desc">Click a column to sort. Acre-feet. ▲ most released, ▼ least. This year is in italics.</p>
+        </div>
+      </div>
+      <div class="tablebox">
+        <table id="t-years">
+          <thead>
+            <tr>
+              <th aria-sort="descending"><button type="button" class="sort" data-key="year">Year</button></th>
+              <th><button type="button" class="sort" data-key="release_af">Released</button></th>
+              <th><button type="button" class="sort" data-key="min_storage_af">Lowest storage</button></th>
+              <th class="narrow-hide"><button type="button" class="sort" data-key="max_storage_af">Highest storage</button></th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </article>
+  </section>
+
+  <details class="notes" id="notes">
+    <summary>How these numbers are made</summary>
+    <dl>
+      <dt>Source</dt>
+      <dd>U.S. Bureau of Reclamation, Upper Colorado Region reservoir data for Blue Mesa (site 913): daily total release, storage and lake elevation. Copied on November 7, 2026.</dd>
+      <dt>Acre-foot</dt>
+      <dd>Enough water to cover one acre a foot deep, about 326,000 gallons. One cubic foot per second flowing for a full day is 1.98347 acre-feet, which is how daily release rates become yearly totals.</dd>
+      <dt>Normal year</dt>
+      <dd>The average of every full calendar year on record. "Normal for this date" compares January 1 through today's date in every year.</dd>
+      <dt>Full pool</dt>
+      <dd>7,519.4 feet above sea level. "Fullest ever" is the highest daily storage reading on record, which is lower than the design capacity because the lake has never been filled to the brim.</dd>
+      <dt>Left out</dt>
+      <dd>December 1968, the first month of records. Only years with a release reading on every day count toward the yearly records.</dd>
+      <dt>Downstream</dt>
+      <dd>Blue Mesa is the first of three Aspinall Unit dams on the Gunnison River. Its water flows into Morrow Point and then Crystal, so flows through the Black Canyon are measured below Crystal Dam.</dd>
+    </dl>
+  </details>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<script id="data" type="application/json">{"summary":{"as_of":"2026-11-06","year":2026,"first_date":"1968-12-01","storage_af":168666,"elevation_ft":7419.84,"full_pool_ft":7519.4,"below_full_ft":99.6,"year_ago_af":398086,"storage_change_af":-229420,"pct_of_record_high":0.20279178705607312,"record_high_af":831721,"record_high_date":"1970-07-08","high_vs_now_af":663055,"record_low_af":138661,"record_low_date":"2026-10-19","above_low_af":30005,"last_this_low":null,"prev_low_af":202246,"prev_low_date":"1984-04-16","same_date_year":2021,"same_date_af":211314,"same_date_diff_af":42648,"ytd_af":595952,"ytd_avg_af":822559,"ytd_pct_of_avg":0.7245102134622977,"ytd_rank_low":10,"ytd_years":58,"ytd_max_year":1984,"ytd_max_af":1587946,"ytd_gap_af":991994,"most_year":1984,"most_af":1751483,"least_year":1990,"least_af":509787,"least_pct_of_avg":0.5544050093820786,"avg_year_af":919521},"years":[{"year":1969,"release_af":816168,"min_storage_af":337552,"min_date":"1969-04-19","max_storage_af":742417,"max_date":"1969-11-02","partial":false},{"year":1970,"release_af":1348740,"min_storage_af":402400,"min_date":"1970-04-08","max_storage_af":831721,"max_date":"1970-07-08","partial":false},{"year":1971,"release_af":1281280,"min_storage_af":259100,"min_date":"1971-04-30","max_storage_af":644880,"max_date":"1971-01-01","partial":false},{"year":1972,"release_af":787748,"min_storage_af":313488,"min_date":"1972-04-05","max_storage_af":543331,"max_date":"1972-07-04","partial":false},{"year":1973,"release_af":811848,"min_storage_af":303343,"min_date":"1973-04-26","max_storage_af":829357,"max_date":"1973-07-22","partial":false},{"year":1974,"release_af":894854,"min_storage_af":266748,"min_date":"1974-04-05","max_storage_af":640505,"max_date":"1974-07-06","partial":false},{"year":1975,"release_af":1021151,"min_storage_af":222242,"min_date":"1975-05-14","max_storage_af":730118,"max_date":"1975-08-21","partial":false},{"year":1976,"release_af":749619,"min_storage_af":421900,"min_date":"1976-04-02","max_storage_af":645208,"max_date":"1976-07-08","partial":false},{"year":1977,"release_af":576970,"min_storage_af":214250,"min_date":"1977-10-30","max_storage_af":477069,"max_date":"1977-01-01","partial":false},{"year":1978,"release_af":616215,"min_storage_af":234107,"min_date":"1978-03-02","max_storage_af":822953,"max_date":"1978-07-20","partial":false},{"year":1979,"release_af":1172520,"min_storage_af":270284,"min_date":"1979-04-18","max_storage_af":821300,"max_date":"1979-07-28","partial":false},{"year":1980,"release_af":1225013,"min_storage_af":334128,"min_date":"1980-04-17","max_storage_af":824332,"max_date":"1980-07-20","partial":false},{"year":1981,"release_af":703547,"min_storage_af":340114,"min_date":"1981-12-29","max_storage_af":556166,"max_date":"1981-01-01","partial":false},{"year":1982,"release_af":810743,"min_storage_af":213052,"min_date":"1982-04-09","max_storage_af":739348,"max_date":"1982-09-30","partial":false},{"year":1983,"release_af":1242446,"min_storage_af":427470,"min_date":"1983-04-23","max_storage_af":825845,"max_date":"1983-07-10","partial":false},{"year":1984,"release_af":1751483,"min_storage_af":202246,"min_date":"1984-04-16","max_storage_af":822095,"max_date":"1984-08-27","partial":false},{"year":1985,"release_af":1461865,"min_storage_af":335155,"min_date":"1985-04-07","max_storage_af":797443,"max_date":"1985-07-24","partial":false},{"year":1986,"release_af":1409751,"min_storage_af":345471,"min_date":"1986-03-27","max_storage_af":828319,"max_date":"1986-07-10","partial":false},{"year":1987,"release_af":1084401,"min_storage_af":302593,"min_date":"1987-04-09","max_storage_af":800954,"max_date":"1987-07-02","partial":false},{"year":1988,"release_af":693487,"min_storage_af":373899,"min_date":"1988-05-12","max_storage_af":545547,"max_date":"1988-01-01","partial":false},{"year":1989,"release_af":546412,"min_storage_af":459057,"min_date":"1989-01-01","max_storage_af":675551,"max_date":"1989-06-30","partial":false},{"year":1990,"release_af":509787,"min_storage_af":543058,"min_date":"1990-04-30","max_storage_af":687048,"max_date":"1990-07-17","partial":false},{"year":1991,"release_af":892322,"min_storage_af":571350,"min_date":"1991-12-31","max_storage_af":825478,"max_date":"1991-06-20","partial":false},{"year":1992,"release_af":695455,"min_storage_af":516323,"min_date":"1992-03-30","max_storage_af":699897,"max_date":"1992-07-02","partial":false},{"year":1993,"release_af":1245922,"min_storage_af":410440,"min_date":"1993-04-26","max_storage_af":814167,"max_date":"1993-07-22","partial":false},{"year":1994,"release_af":759975,"min_storage_af":558455,"min_date":"1994-04-14","max_storage_af":756824,"max_date":"1994-06-27","partial":false},{"year":1995,"release_af":1633227,"min_storage_af":431554,"min_date":"1995-05-15","max_storage_af":824197,"max_date":"1995-07-12","partial":false},{"year":1996,"release_af":1107633,"min_storage_af":479037,"min_date":"1996-04-06","max_storage_af":825112,"max_date":"1996-06-17","partial":false},{"year":1997,"release_af":1453341,"min_storage_af":298664,"min_date":"1997-04-17","max_storage_af":816532,"max_date":"1997-07-01","partial":false},{"year":1998,"release_af":862951,"min_storage_af":438770,"min_date":"1998-04-22","max_storage_af":701669,"max_date":"1998-08-04","partial":false},{"year":1999,"release_af":1006692,"min_storage_af":535397,"min_date":"1999-04-29","max_storage_af":828044,"max_date":"1999-07-31","partial":false},{"year":2000,"release_af":831847,"min_storage_af":504611,"min_date":"2000-12-31","max_storage_af":737792,"max_date":"2000-06-17","partial":false},{"year":2001,"release_af":711838,"min_storage_af":453803,"min_date":"2001-04-27","max_storage_af":676880,"max_date":"2001-07-01","partial":false},{"year":2002,"release_af":589425,"min_storage_af":262813,"min_date":"2002-10-22","max_storage_af":543510,"max_date":"2002-01-01","partial":false},{"year":2003,"release_af":509872,"min_storage_af":283350,"min_date":"2003-01-02","max_storage_af":514705,"max_date":"2003-06-25","partial":false},{"year":2004,"release_af":515713,"min_storage_af":376751,"min_date":"2004-01-01","max_storage_af":639310,"max_date":"2004-07-03","partial":false},{"year":2005,"release_af":728722,"min_storage_af":356026,"min_date":"2005-05-16","max_storage_af":652983,"max_date":"2005-07-13","partial":false},{"year":2006,"release_af":837993,"min_storage_af":562661,"min_date":"2006-04-07","max_storage_af":814348,"max_date":"2006-06-17","partial":false},{"year":2007,"release_af":786065,"min_storage_af":488583,"min_date":"2007-03-12","max_storage_af":786871,"max_date":"2007-07-02","partial":false},{"year":2008,"release_af":1264258,"min_storage_af":407186,"min_date":"2008-05-05","max_storage_af":762170,"max_date":"2008-07-31","partial":false},{"year":2009,"release_af":1008551,"min_storage_af":538170,"min_date":"2009-04-08","max_storage_af":827494,"max_date":"2009-06-26","partial":false},{"year":2010,"release_af":739351,"min_storage_af":537495,"min_date":"2010-04-10","max_storage_af":735980,"max_date":"2010-06-27","partial":false},{"year":2011,"release_af":1146024,"min_storage_af":466227,"min_date":"2011-05-07","max_storage_af":828135,"max_date":"2011-07-16","partial":false},{"year":2012,"release_af":644207,"min_storage_af":323764,"min_date":"2012-11-13","max_storage_af":572817,"max_date":"2012-01-01","partial":false},{"year":2013,"release_af":535281,"min_storage_af":326963,"min_date":"2013-01-23","max_storage_af":451600,"max_date":"2013-06-20","partial":false},{"year":2014,"release_af":953653,"min_storage_af":381177,"min_date":"2014-01-01","max_storage_af":703527,"max_date":"2014-06-06","partial":false},{"year":2015,"release_af":958992,"min_storage_af":545471,"min_date":"2015-02-04","max_storage_af":829145,"max_date":"2015-06-20","partial":false},{"year":2016,"release_af":898736,"min_storage_af":556852,"min_date":"2016-03-08","max_storage_af":798702,"max_date":"2016-07-07","partial":false},{"year":2017,"release_af":1238445,"min_storage_af":548420,"min_date":"2017-03-17","max_storage_af":822369,"max_date":"2017-08-09","partial":false},{"year":2018,"release_af":756730,"min_storage_af":246856,"min_date":"2018-12-14","max_storage_af":591104,"max_date":"2018-01-01","partial":false},{"year":2019,"release_af":1005148,"min_storage_af":245689,"min_date":"2019-03-10","max_storage_af":827494,"max_date":"2019-07-25","partial":false},{"year":2020,"release_af":771944,"min_storage_af":388579,"min_date":"2020-11-05","max_storage_af":603855,"max_date":"2020-06-19","partial":false},{"year":2021,"release_af":694340,"min_storage_af":208761,"min_date":"2021-11-01","max_storage_af":404352,"max_date":"2021-03-17","partial":false},{"year":2022,"release_af":595795,"min_storage_af":231336,"min_date":"2022-01-01","max_storage_af":390926,"max_date":"2022-07-05","partial":false},{"year":2023,"release_af":756953,"min_storage_af":289961,"min_date":"2023-01-03","max_storage_af":765190,"max_date":"2023-06-25","partial":false},{"year":2024,"release_af":981549,"min_storage_af":473007,"min_date":"2024-06-04","max_storage_af":656131,"max_date":"2024-07-09","partial":false},{"year":2025,"release_af":777694,"min_storage_af":392199,"min_date":"2025-10-19","max_storage_af":583869,"max_date":"2025-06-23","partial":false},{"year":2026,"release_af":595952,"min_storage_af":138661,"min_date":"2026-10-19","max_storage_af":421848,"max_date":"2026-01-20","partial":true}],"monthly":[{"month":"1968-12","storage_af":545653,"elevation_ft":7485.4},{"month":"1969-01","storage_af":472286,"elevation_ft":7475.3},{"month":"1969-02","storage_af":431891,"elevation_ft":7469.5},{"month":"1969-03","storage_af":383004,"elevation_ft":7461.9},{"month":"1969-04","storage_af":344599,"elevation_ft":7455.6},{"month":"1969-05","storage_af":431866,"elevation_ft":7469.3},{"month":"1969-06","storage_af":595398,"elevation_ft":7491.8},{"month":"1969-07","storage_af":695585,"elevation_ft":7504.1},{"month":"1969-08","storage_af":717560,"elevation_ft":7506.7},{"month":"1969-09","storage_af":718136,"elevation_ft":7506.8},{"month":"1969-10","storage_af":730959,"elevation_ft":7508.3},{"month":"1969-11","storage_af":724373,"elevation_ft":7507.5},{"month":"1969-12","storage_af":679174,"elevation_ft":7502.2},{"month":"1970-01","storage_af":625117,"elevation_ft":7495.6},{"month":"1970-02","storage_af":548715,"elevation_ft":7485.7},{"month":"1970-03","storage_af":438431,"elevation_ft":7470.4},{"month":"1970-04","storage_af":407330,"elevation_ft":7465.8},{"month":"1970-05","storage_af":563752,"elevation_ft":7487.1},{"month":"1970-06","storage_af":802034,"elevation_ft":7516.4},{"month":"1970-07","storage_af":825011,"elevation_ft":7518.9},{"month":"1970-08","storage_af":810931,"elevation_ft":7517.4},{"month":"1970-09","storage_af":808751,"elevation_ft":7517.1},{"month":"1970-10","storage_af":793455,"elevation_ft":7515.4},{"month":"1970-11","storage_af":747878,"elevation_ft":7510.3},{"month":"1970-12","storage_af":689385,"elevation_ft":7503.4},{"month":"1971-01","storage_af":592989,"elevation_ft":7491.5},{"month":"1971-02","storage_af":478430,"elevation_ft":7476.1},{"month":"1971-03","storage_af":349768,"elevation_ft":7456.3},{"month":"1971-04","storage_af":281423,"elevation_ft":7444.3},{"month":"1971-05","storage_af":309571,"elevation_ft":7449.4},{"month":"1971-06","storage_af":466591,"elevation_ft":7474.2},{"month":"1971-07","storage_af":617634,"elevation_ft":7494.6},{"month":"1971-08","storage_af":595002,"elevation_ft":7491.8},{"month":"1971-09","storage_af":558548,"elevation_ft":7487.1},{"month":"1971-10","storage_af":517964,"elevation_ft":7481.7},{"month":"1971-11","storage_af":504079,"elevation_ft":7479.8},{"month":"1971-12","storage_af":461957,"elevation_ft":7473.8},{"month":"1972-01","storage_af":399338,"elevation_ft":7464.5},{"month":"1972-02","storage_af":345851,"elevation_ft":7455.8},{"month":"1972-03","storage_af":317931,"elevation_ft":7451.0},{"month":"1972-04","storage_af":316845,"elevation_ft":7450.8},{"month":"1972-05","storage_af":341087,"elevation_ft":7455.0},{"month":"1972-06","storage_af":486248,"elevation_ft":7477.1},{"month":"1972-07","storage_af":536639,"elevation_ft":7484.2},{"month":"1972-08","storage_af":525833,"elevation_ft":7482.7},{"month":"1972-09","storage_af":510991,"elevation_ft":7480.7},{"month":"1972-10","storage_af":524272,"elevation_ft":7482.5},{"month":"1972-11","storage_af":519393,"elevation_ft":7481.9},{"month":"1972-12","storage_af":458158,"elevation_ft":7473.3},{"month":"1973-01","storage_af":363965,"elevation_ft":7458.8},{"month":"1973-02","storage_af":322413,"elevation_ft":7451.8},{"month":"1973-03","storage_af":311156,"elevation_ft":7449.8},{"month":"1973-04","storage_af":306206,"elevation_ft":7448.9},{"month":"1973-05","storage_af":378832,"elevation_ft":7460.9},{"month":"1973-06","storage_af":591446,"elevation_ft":7491.0},{"month":"1973-07","storage_af":800005,"elevation_ft":7516.1},{"month":"1973-08","storage_af":797635,"elevation_ft":7515.9},{"month":"1973-09","storage_af":733933,"elevation_ft":7508.6},{"month":"1973-10","storage_af":716875,"elevation_ft":7506.7},{"month":"1973-11","storage_af":712999,"elevation_ft":7506.2},{"month":"1973-12","storage_af":650728,"elevation_ft":7498.7},{"month":"1974-01","storage_af":532913,"elevation_ft":7483.6},{"month":"1974-02","storage_af":407572,"elevation_ft":7465.7},{"month":"1974-03","storage_af":291799,"elevation_ft":7446.2},{"month":"1974-04","storage_af":273242,"elevation_ft":7442.7},{"month":"1974-05","storage_af":399379,"elevation_ft":7464.1},{"month":"1974-06","storage_af":577899,"elevation_ft":7489.5},{"month":"1974-07","storage_af":638867,"elevation_ft":7497.3},{"month":"1974-08","storage_af":633959,"elevation_ft":7496.7},{"month":"1974-09","storage_af":599712,"elevation_ft":7492.4},{"month":"1974-10","storage_af":562020,"elevation_ft":7487.5},{"month":"1974-11","storage_af":540700,"elevation_ft":7484.7},{"month":"1974-12","storage_af":499744,"elevation_ft":7479.2},{"month":"1975-01","storage_af":447540,"elevation_ft":7471.8},{"month":"1975-02","storage_af":393658,"elevation_ft":7463.6},{"month":"1975-03","storage_af":345192,"elevation_ft":7455.7},{"month":"1975-04","storage_af":297765,"elevation_ft":7447.3},{"month":"1975-05","storage_af":243325,"elevation_ft":7436.7},{"month":"1975-06","storage_af":377534,"elevation_ft":7460.4},{"month":"1975-07","storage_af":644028,"elevation_ft":7497.7},{"month":"1975-08","storage_af":726416,"elevation_ft":7507.8},{"month":"1975-09","storage_af":711364,"elevation_ft":7506.0},{"month":"1975-10","storage_af":676482,"elevation_ft":7501.8},{"month":"1975-11","storage_af":635919,"elevation_ft":7496.9},{"month":"1975-12","storage_af":571725,"elevation_ft":7488.8},{"month":"1976-01","storage_af":494603,"elevation_ft":7478.4},{"month":"1976-02","storage_af":451884,"elevation_ft":7472.4},{"month":"1976-03","storage_af":433034,"elevation_ft":7469.6},{"month":"1976-04","storage_af":429192,"elevation_ft":7469.1},{"month":"1976-05","storage_af":477439,"elevation_ft":7476.0},{"month":"1976-06","storage_af":599642,"elevation_ft":7492.3},{"month":"1976-07","storage_af":643874,"elevation_ft":7497.9},{"month":"1976-08","storage_af":641504,"elevation_ft":7497.6},{"month":"1976-09","storage_af":618095,"elevation_ft":7494.7},{"month":"1976-10","storage_af":595084,"elevation_ft":7491.8},{"month":"1976-11","storage_af":563388,"elevation_ft":7487.7},{"month":"1976-12","storage_af":509512,"elevation_ft":7480.5},{"month":"1977-01","storage_af":445928,"elevation_ft":7471.5},{"month":"1977-02","storage_af":402020,"elevation_ft":7464.9},{"month":"1977-03","storage_af":387447,"elevation_ft":7462.7},{"month":"1977-04","storage_af":370532,"elevation_ft":7459.9},{"month":"1977-05","storage_af":353709,"elevation_ft":7457.2},{"month":"1977-06","storage_af":333636,"elevation_ft":7453.8},{"month":"1977-07","storage_af":295737,"elevation_ft":7447.0},{"month":"1977-08","storage_af":256856,"elevation_ft":7439.5},{"month":"1977-09","storage_af":227847,"elevation_ft":7433.5},{"month":"1977-10","storage_af":216857,"elevation_ft":7431.1},{"month":"1977-11","storage_af":219796,"elevation_ft":7431.7},{"month":"1977-12","storage_af":231603,"elevation_ft":7434.3},{"month":"1978-01","storage_af":238065,"elevation_ft":7435.7},{"month":"1978-02","storage_af":237399,"elevation_ft":7435.5},{"month":"1978-03","storage_af":238749,"elevation_ft":7435.8},{"month":"1978-04","storage_af":268396,"elevation_ft":7441.8},{"month":"1978-05","storage_af":342621,"elevation_ft":7455.0},{"month":"1978-06","storage_af":612859,"elevation_ft":7493.6},{"month":"1978-07","storage_af":804438,"elevation_ft":7516.6},{"month":"1978-08","storage_af":805937,"elevation_ft":7516.8},{"month":"1978-09","storage_af":754503,"elevation_ft":7511.0},{"month":"1978-10","storage_af":707492,"elevation_ft":7505.5},{"month":"1978-11","storage_af":671207,"elevation_ft":7501.2},{"month":"1978-12","storage_af":630403,"elevation_ft":7496.2},{"month":"1979-01","storage_af":554343,"elevation_ft":7486.5},{"month":"1979-02","storage_af":471076,"elevation_ft":7475.1},{"month":"1979-03","storage_af":361631,"elevation_ft":7458.4},{"month":"1979-04","storage_af":280334,"elevation_ft":7444.1},{"month":"1979-05","storage_af":319507,"elevation_ft":7450.9},{"month":"1979-06","storage_af":616761,"elevation_ft":7494.2},{"month":"1979-07","storage_af":807326,"elevation_ft":7517.0},{"month":"1979-08","storage_af":801388,"elevation_ft":7516.3},{"month":"1979-09","storage_af":744174,"elevation_ft":7509.8},{"month":"1979-10","storage_af":680869,"elevation_ft":7502.4},{"month":"1979-11","storage_af":660395,"elevation_ft":7499.9},{"month":"1979-12","storage_af":614062,"elevation_ft":7494.2},{"month":"1980-01","storage_af":545120,"elevation_ft":7485.3},{"month":"1980-02","storage_af":477178,"elevation_ft":7476.0},{"month":"1980-03","storage_af":403752,"elevation_ft":7465.1},{"month":"1980-04","storage_af":345985,"elevation_ft":7455.9},{"month":"1980-05","storage_af":415780,"elevation_ft":7466.9},{"month":"1980-06","storage_af":654841,"elevation_ft":7498.9},{"month":"1980-07","storage_af":812654,"elevation_ft":7517.5},{"month":"1980-08","storage_af":793689,"elevation_ft":7515.4},{"month":"1980-09","storage_af":752833,"elevation_ft":7510.8},{"month":"1980-10","storage_af":714718,"elevation_ft":7506.4},{"month":"1980-11","storage_af":663781,"elevation_ft":7500.3},{"month":"1980-12","storage_af":593424,"elevation_ft":7491.5},{"month":"1981-01","storage_af":518936,"elevation_ft":7481.7},{"month":"1981-02","storage_af":462890,"elevation_ft":7473.9},{"month":"1981-03","storage_af":427566,"elevation_ft":7468.8},{"month":"1981-04","storage_af":398003,"elevation_ft":7464.3},{"month":"1981-05","storage_af":382512,"elevation_ft":7461.8},{"month":"1981-06","storage_af":419770,"elevation_ft":7467.6},{"month":"1981-07","storage_af":423003,"elevation_ft":7468.1},{"month":"1981-08","storage_af":408207,"elevation_ft":7465.8},{"month":"1981-09","storage_af":386834,"elevation_ft":7462.5},{"month":"1981-10","storage_af":366288,"elevation_ft":7459.2},{"month":"1981-11","storage_af":356984,"elevation_ft":7457.7},{"month":"1981-12","storage_af":345557,"elevation_ft":7455.7},{"month":"1982-01","storage_af":336662,"elevation_ft":7454.2},{"month":"1982-02","storage_af":297657,"elevation_ft":7447.2},{"month":"1982-03","storage_af":238966,"elevation_ft":7435.7},{"month":"1982-04","storage_af":221799,"elevation_ft":7432.1},{"month":"1982-05","storage_af":314059,"elevation_ft":7450.0},{"month":"1982-06","storage_af":528832,"elevation_ft":7482.7},{"month":"1982-07","storage_af":700587,"elevation_ft":7504.7},{"month":"1982-08","storage_af":720199,"elevation_ft":7507.0},{"month":"1982-09","storage_af":734997,"elevation_ft":7508.7},{"month":"1982-10","storage_af":732389,"elevation_ft":7508.4},{"month":"1982-11","storage_af":705030,"elevation_ft":7505.2},{"month":"1982-12","storage_af":642501,"elevation_ft":7497.7},{"month":"1983-01","storage_af":570902,"elevation_ft":7488.6},{"month":"1983-02","storage_af":507711,"elevation_ft":7480.2},{"month":"1983-03","storage_af":457639,"elevation_ft":7473.2},{"month":"1983-04","storage_af":435532,"elevation_ft":7470.0},{"month":"1983-05","storage_af":469381,"elevation_ft":7474.8},{"month":"1983-06","storage_af":725246,"elevation_ft":7507.4},{"month":"1983-07","storage_af":818909,"elevation_ft":7518.2},{"month":"1983-08","storage_af":813356,"elevation_ft":7517.6},{"month":"1983-09","storage_af":764696,"elevation_ft":7512.1},{"month":"1983-10","storage_af":715556,"elevation_ft":7506.5},{"month":"1983-11","storage_af":678374,"elevation_ft":7502.1},{"month":"1983-12","storage_af":620020,"elevation_ft":7494.9},{"month":"1984-01","storage_af":542883,"elevation_ft":7484.9},{"month":"1984-02","storage_af":431658,"elevation_ft":7469.3},{"month":"1984-03","storage_af":307219,"elevation_ft":7448.8},{"month":"1984-04","storage_af":216898,"elevation_ft":7431.0},{"month":"1984-05","storage_af":379192,"elevation_ft":7458.7},{"month":"1984-06","storage_af":765353,"elevation_ft":7512.2},{"month":"1984-07","storage_af":813931,"elevation_ft":7517.7},{"month":"1984-08","storage_af":817391,"elevation_ft":7518.0},{"month":"1984-09","storage_af":801488,"elevation_ft":7516.3},{"month":"1984-10","storage_af":783596,"elevation_ft":7514.3},{"month":"1984-11","storage_af":742508,"elevation_ft":7509.6},{"month":"1984-12","storage_af":688821,"elevation_ft":7503.3},{"month":"1985-01","storage_af":610695,"elevation_ft":7493.7},{"month":"1985-02","storage_af":493375,"elevation_ft":7478.2},{"month":"1985-03","storage_af":385078,"elevation_ft":7462.1},{"month":"1985-04","storage_af":345002,"elevation_ft":7455.6},{"month":"1985-05","storage_af":469692,"elevation_ft":7474.6},{"month":"1985-06","storage_af":718901,"elevation_ft":7506.7},{"month":"1985-07","storage_af":791283,"elevation_ft":7515.2},{"month":"1985-08","storage_af":773813,"elevation_ft":7513.2},{"month":"1985-09","storage_af":735083,"elevation_ft":7508.8},{"month":"1985-10","storage_af":714018,"elevation_ft":7506.3},{"month":"1985-11","storage_af":664954,"elevation_ft":7500.4},{"month":"1985-12","storage_af":603539,"elevation_ft":7492.8},{"month":"1986-01","storage_af":525013,"elevation_ft":7482.5},{"month":"1986-02","storage_af":430586,"elevation_ft":7469.2},{"month":"1986-03","storage_af":361785,"elevation_ft":7458.4},{"month":"1986-04","storage_af":357605,"elevation_ft":7457.8},{"month":"1986-05","storage_af":414942,"elevation_ft":7466.8},{"month":"1986-06","storage_af":653414,"elevation_ft":7498.6},{"month":"1986-07","storage_af":818773,"elevation_ft":7518.2},{"month":"1986-08","storage_af":802943,"elevation_ft":7516.4},{"month":"1986-09","storage_af":762915,"elevation_ft":7511.9},{"month":"1986-10","storage_af":718574,"elevation_ft":7506.8},{"month":"1986-11","storage_af":688402,"elevation_ft":7503.3},{"month":"1986-12","storage_af":623181,"elevation_ft":7495.3},{"month":"1987-01","storage_af":528107,"elevation_ft":7483.0},{"month":"1987-02","storage_af":441777,"elevation_ft":7470.8},{"month":"1987-03","storage_af":355670,"elevation_ft":7457.4},{"month":"1987-04","storage_af":321384,"elevation_ft":7451.5},{"month":"1987-05","storage_af":502364,"elevation_ft":7479.1},{"month":"1987-06","storage_af":720080,"elevation_ft":7506.9},{"month":"1987-07","storage_af":787408,"elevation_ft":7514.7},{"month":"1987-08","storage_af":742312,"elevation_ft":7509.6},{"month":"1987-09","storage_af":712846,"elevation_ft":7506.2},{"month":"1987-10","storage_af":672782,"elevation_ft":7501.4},{"month":"1987-11","storage_af":627395,"elevation_ft":7495.8},{"month":"1987-12","storage_af":575526,"elevation_ft":7489.2},{"month":"1988-01","storage_af":517797,"elevation_ft":7481.6},{"month":"1988-02","storage_af":462552,"elevation_ft":7473.9},{"month":"1988-03","storage_af":407555,"elevation_ft":7465.7},{"month":"1988-04","storage_af":378156,"elevation_ft":7461.1},{"month":"1988-05","storage_af":388945,"elevation_ft":7462.8},{"month":"1988-06","storage_af":473695,"elevation_ft":7475.4},{"month":"1988-07","storage_af":514799,"elevation_ft":7481.2},{"month":"1988-08","storage_af":490708,"elevation_ft":7477.9},{"month":"1988-09","storage_af":462780,"elevation_ft":7473.9},{"month":"1988-10","storage_af":441710,"elevation_ft":7470.9},{"month":"1988-11","storage_af":444279,"elevation_ft":7471.2},{"month":"1988-12","storage_af":454178,"elevation_ft":7472.7},{"month":"1989-01","storage_af":465596,"elevation_ft":7474.3},{"month":"1989-02","storage_af":474565,"elevation_ft":7475.6},{"month":"1989-03","storage_af":490575,"elevation_ft":7477.9},{"month":"1989-04","storage_af":523738,"elevation_ft":7482.4},{"month":"1989-05","storage_af":576290,"elevation_ft":7489.3},{"month":"1989-06","storage_af":655998,"elevation_ft":7499.3},{"month":"1989-07","storage_af":663411,"elevation_ft":7500.2},{"month":"1989-08","storage_af":648046,"elevation_ft":7498.4},{"month":"1989-09","storage_af":607237,"elevation_ft":7493.3},{"month":"1989-10","storage_af":568472,"elevation_ft":7488.3},{"month":"1989-11","storage_af":557518,"elevation_ft":7486.9},{"month":"1989-12","storage_af":562432,"elevation_ft":7487.6},{"month":"1990-01","storage_af":565928,"elevation_ft":7488.0},{"month":"1990-02","storage_af":570833,"elevation_ft":7488.6},{"month":"1990-03","storage_af":577741,"elevation_ft":7489.5},{"month":"1990-04","storage_af":558252,"elevation_ft":7487.0},{"month":"1990-05","storage_af":549467,"elevation_ft":7485.8},{"month":"1990-06","storage_af":641350,"elevation_ft":7497.5},{"month":"1990-07","storage_af":683509,"elevation_ft":7502.7},{"month":"1990-08","storage_af":666474,"elevation_ft":7500.6},{"month":"1990-09","storage_af":632204,"elevation_ft":7496.4},{"month":"1990-10","storage_af":620352,"elevation_ft":7494.9},{"month":"1990-11","storage_af":637409,"elevation_ft":7497.1},{"month":"1990-12","storage_af":646842,"elevation_ft":7498.2},{"month":"1991-01","storage_af":641455,"elevation_ft":7497.6},{"month":"1991-02","storage_af":631328,"elevation_ft":7496.3},{"month":"1991-03","storage_af":627111,"elevation_ft":7495.8},{"month":"1991-04","storage_af":647006,"elevation_ft":7498.2},{"month":"1991-05","storage_af":704265,"elevation_ft":7505.1},{"month":"1991-06","storage_af":808842,"elevation_ft":7517.1},{"month":"1991-07","storage_af":814383,"elevation_ft":7517.7},{"month":"1991-08","storage_af":788134,"elevation_ft":7514.8},{"month":"1991-09","storage_af":728624,"elevation_ft":7508.0},{"month":"1991-10","storage_af":669338,"elevation_ft":7501.0},{"month":"1991-11","storage_af":629570,"elevation_ft":7496.1},{"month":"1991-12","storage_af":593320,"elevation_ft":7491.5},{"month":"1992-01","storage_af":550231,"elevation_ft":7485.9},{"month":"1992-02","storage_af":527953,"elevation_ft":7483.0},{"month":"1992-03","storage_af":518836,"elevation_ft":7481.8},{"month":"1992-04","storage_af":532966,"elevation_ft":7483.6},{"month":"1992-05","storage_af":588992,"elevation_ft":7491.0},{"month":"1992-06","storage_af":671277,"elevation_ft":7501.2},{"month":"1992-07","storage_af":691955,"elevation_ft":7503.7},{"month":"1992-08","storage_af":665684,"elevation_ft":7500.5},{"month":"1992-09","storage_af":624724,"elevation_ft":7495.5},{"month":"1992-10","storage_af":585905,"elevation_ft":7490.6},{"month":"1992-11","storage_af":574938,"elevation_ft":7489.2},{"month":"1992-12","storage_af":583020,"elevation_ft":7490.2},{"month":"1993-01","storage_af":580891,"elevation_ft":7489.9},{"month":"1993-02","storage_af":575096,"elevation_ft":7489.2},{"month":"1993-03","storage_af":507268,"elevation_ft":7480.1},{"month":"1993-04","storage_af":429377,"elevation_ft":7469.0},{"month":"1993-05","storage_af":468101,"elevation_ft":7474.4},{"month":"1993-06","storage_af":704377,"elevation_ft":7505.1},{"month":"1993-07","storage_af":808183,"elevation_ft":7517.0},{"month":"1993-08","storage_af":793698,"elevation_ft":7515.4},{"month":"1993-09","storage_af":748512,"elevation_ft":7510.3},{"month":"1993-10","storage_af":706694,"elevation_ft":7505.4},{"month":"1993-11","storage_af":667764,"elevation_ft":7500.8},{"month":"1993-12","storage_af":623006,"elevation_ft":7495.3},{"month":"1994-01","storage_af":574183,"elevation_ft":7489.1},{"month":"1994-02","storage_af":560092,"elevation_ft":7487.2},{"month":"1994-03","storage_af":566742,"elevation_ft":7488.1},{"month":"1994-04","storage_af":566903,"elevation_ft":7488.1},{"month":"1994-05","storage_af":608452,"elevation_ft":7493.4},{"month":"1994-06","storage_af":726195,"elevation_ft":7507.7},{"month":"1994-07","storage_af":729766,"elevation_ft":7508.1},{"month":"1994-08","storage_af":684014,"elevation_ft":7502.7},{"month":"1994-09","storage_af":632905,"elevation_ft":7496.5},{"month":"1994-10","storage_af":610482,"elevation_ft":7493.7},{"month":"1994-11","storage_af":600598,"elevation_ft":7492.5},{"month":"1994-12","storage_af":586402,"elevation_ft":7490.6},{"month":"1995-01","storage_af":572329,"elevation_ft":7488.8},{"month":"1995-02","storage_af":569199,"elevation_ft":7488.4},{"month":"1995-03","storage_af":557068,"elevation_ft":7486.8},{"month":"1995-04","storage_af":508949,"elevation_ft":7480.4},{"month":"1995-05","storage_af":447601,"elevation_ft":7471.7},{"month":"1995-06","storage_af":614443,"elevation_ft":7493.6},{"month":"1995-07","storage_af":812263,"elevation_ft":7517.5},{"month":"1995-08","storage_af":792301,"elevation_ft":7515.3},{"month":"1995-09","storage_af":789007,"elevation_ft":7514.9},{"month":"1995-10","storage_af":757667,"elevation_ft":7511.3},{"month":"1995-11","storage_af":695156,"elevation_ft":7504.1},{"month":"1995-12","storage_af":626094,"elevation_ft":7495.6},{"month":"1996-01","storage_af":552838,"elevation_ft":7486.3},{"month":"1996-02","storage_af":526656,"elevation_ft":7482.8},{"month":"1996-03","storage_af":505479,"elevation_ft":7479.9},{"month":"1996-04","storage_af":487891,"elevation_ft":7477.5},{"month":"1996-05","storage_af":601458,"elevation_ft":7492.3},{"month":"1996-06","storage_af":791811,"elevation_ft":7515.2},{"month":"1996-07","storage_af":795360,"elevation_ft":7515.6},{"month":"1996-08","storage_af":757723,"elevation_ft":7511.4},{"month":"1996-09","storage_af":704518,"elevation_ft":7505.2},{"month":"1996-10","storage_af":677174,"elevation_ft":7501.9},{"month":"1996-11","storage_af":649749,"elevation_ft":7498.6},{"month":"1996-12","storage_af":619630,"elevation_ft":7494.8},{"month":"1997-01","storage_af":574180,"elevation_ft":7489.1},{"month":"1997-02","storage_af":502797,"elevation_ft":7479.5},{"month":"1997-03","storage_af":410749,"elevation_ft":7466.1},{"month":"1997-04","storage_af":317872,"elevation_ft":7450.9},{"month":"1997-05","storage_af":433915,"elevation_ft":7469.2},{"month":"1997-06","storage_af":728519,"elevation_ft":7507.8},{"month":"1997-07","storage_af":797868,"elevation_ft":7515.9},{"month":"1997-08","storage_af":801155,"elevation_ft":7516.3},{"month":"1997-09","storage_af":767677,"elevation_ft":7512.5},{"month":"1997-10","storage_af":741235,"elevation_ft":7509.5},{"month":"1997-11","storage_af":685886,"elevation_ft":7503.0},{"month":"1997-12","storage_af":618227,"elevation_ft":7494.7},{"month":"1998-01","storage_af":545165,"elevation_ft":7485.3},{"month":"1998-02","storage_af":496553,"elevation_ft":7478.7},{"month":"1998-03","storage_af":457360,"elevation_ft":7473.2},{"month":"1998-04","storage_af":445138,"elevation_ft":7471.4},{"month":"1998-05","storage_af":506702,"elevation_ft":7480.0},{"month":"1998-06","storage_af":618747,"elevation_ft":7494.7},{"month":"1998-07","storage_af":692040,"elevation_ft":7503.7},{"month":"1998-08","storage_af":692137,"elevation_ft":7503.7},{"month":"1998-09","storage_af":650547,"elevation_ft":7498.7},{"month":"1998-10","storage_af":612009,"elevation_ft":7493.9},{"month":"1998-11","storage_af":597969,"elevation_ft":7492.1},{"month":"1998-12","storage_af":583917,"elevation_ft":7490.3},{"month":"1999-01","storage_af":571185,"elevation_ft":7488.7},{"month":"1999-02","storage_af":561498,"elevation_ft":7487.4},{"month":"1999-03","storage_af":555693,"elevation_ft":7486.7},{"month":"1999-04","storage_af":542284,"elevation_ft":7484.9},{"month":"1999-05","storage_af":553471,"elevation_ft":7486.4},{"month":"1999-06","storage_af":694911,"elevation_ft":7503.9},{"month":"1999-07","storage_af":815432,"elevation_ft":7517.8},{"month":"1999-08","storage_af":810009,"elevation_ft":7517.2},{"month":"1999-09","storage_af":780003,"elevation_ft":7513.9},{"month":"1999-10","storage_af":693624,"elevation_ft":7503.9},{"month":"1999-11","storage_af":647084,"elevation_ft":7498.3},{"month":"1999-12","storage_af":606678,"elevation_ft":7493.2},{"month":"2000-01","storage_af":574610,"elevation_ft":7489.1},{"month":"2000-02","storage_af":564252,"elevation_ft":7487.8},{"month":"2000-03","storage_af":557402,"elevation_ft":7486.9},{"month":"2000-04","storage_af":549105,"elevation_ft":7485.8},{"month":"2000-05","storage_af":632243,"elevation_ft":7496.4},{"month":"2000-06","storage_af":728451,"elevation_ft":7508.0},{"month":"2000-07","storage_af":710473,"elevation_ft":7505.9},{"month":"2000-08","storage_af":648640,"elevation_ft":7498.4},{"month":"2000-09","storage_af":584280,"elevation_ft":7490.4},{"month":"2000-10","storage_af":537025,"elevation_ft":7484.2},{"month":"2000-11","storage_af":516701,"elevation_ft":7481.5},{"month":"2000-12","storage_af":508923,"elevation_ft":7480.4},{"month":"2001-01","storage_af":498966,"elevation_ft":7479.0},{"month":"2001-02","storage_af":490821,"elevation_ft":7477.9},{"month":"2001-03","storage_af":482682,"elevation_ft":7476.8},{"month":"2001-04","storage_af":464536,"elevation_ft":7474.2},{"month":"2001-05","storage_af":511830,"elevation_ft":7480.7},{"month":"2001-06","storage_af":651626,"elevation_ft":7498.8},{"month":"2001-07","storage_af":670129,"elevation_ft":7501.1},{"month":"2001-08","storage_af":655156,"elevation_ft":7499.2},{"month":"2001-09","storage_af":617957,"elevation_ft":7494.6},{"month":"2001-10","storage_af":573312,"elevation_ft":7489.0},{"month":"2001-11","storage_af":553493,"elevation_ft":7486.4},{"month":"2001-12","storage_af":547440,"elevation_ft":7485.6},{"month":"2002-01","storage_af":538479,"elevation_ft":7484.4},{"month":"2002-02","storage_af":527699,"elevation_ft":7482.9},{"month":"2002-03","storage_af":518597,"elevation_ft":7481.7},{"month":"2002-04","storage_af":512731,"elevation_ft":7480.9},{"month":"2002-05","storage_af":489074,"elevation_ft":7477.7},{"month":"2002-06","storage_af":474375,"elevation_ft":7475.6},{"month":"2002-07","storage_af":408452,"elevation_ft":7465.8},{"month":"2002-08","storage_af":345710,"elevation_ft":7455.7},{"month":"2002-09","storage_af":297297,"elevation_ft":7447.2},{"month":"2002-10","storage_af":267007,"elevation_ft":7441.5},{"month":"2002-11","storage_af":272182,"elevation_ft":7442.5},{"month":"2002-12","storage_af":281035,"elevation_ft":7444.2},{"month":"2003-01","storage_af":286480,"elevation_ft":7445.2},{"month":"2003-02","storage_af":294014,"elevation_ft":7446.6},{"month":"2003-03","storage_af":302593,"elevation_ft":7448.2},{"month":"2003-04","storage_af":301552,"elevation_ft":7448.0},{"month":"2003-05","storage_af":322038,"elevation_ft":7451.5},{"month":"2003-06","storage_af":491407,"elevation_ft":7477.9},{"month":"2003-07","storage_af":483453,"elevation_ft":7476.9},{"month":"2003-08","storage_af":429763,"elevation_ft":7469.1},{"month":"2003-09","storage_af":394932,"elevation_ft":7463.8},{"month":"2003-10","storage_af":373920,"elevation_ft":7460.4},{"month":"2003-11","storage_af":367192,"elevation_ft":7459.3},{"month":"2003-12","storage_af":373627,"elevation_ft":7460.4},{"month":"2004-01","storage_af":380090,"elevation_ft":7461.4},{"month":"2004-02","storage_af":386567,"elevation_ft":7462.5},{"month":"2004-03","storage_af":401203,"elevation_ft":7464.7},{"month":"2004-04","storage_af":441431,"elevation_ft":7470.8},{"month":"2004-05","storage_af":502213,"elevation_ft":7479.4},{"month":"2004-06","storage_af":613335,"elevation_ft":7494.0},{"month":"2004-07","storage_af":624667,"elevation_ft":7495.5},{"month":"2004-08","storage_af":584536,"elevation_ft":7490.4},{"month":"2004-09","storage_af":527535,"elevation_ft":7482.9},{"month":"2004-10","storage_af":483230,"elevation_ft":7476.8},{"month":"2004-11","storage_af":486951,"elevation_ft":7477.4},{"month":"2004-12","storage_af":491238,"elevation_ft":7478.0},{"month":"2005-01","storage_af":490236,"elevation_ft":7477.8},{"month":"2005-02","storage_af":474169,"elevation_ft":7475.6},{"month":"2005-03","storage_af":441579,"elevation_ft":7470.8},{"month":"2005-04","storage_af":390535,"elevation_ft":7463.1},{"month":"2005-05","storage_af":385285,"elevation_ft":7462.1},{"month":"2005-06","storage_af":552291,"elevation_ft":7486.1},{"month":"2005-07","storage_af":647992,"elevation_ft":7498.4},{"month":"2005-08","storage_af":640442,"elevation_ft":7497.4},{"month":"2005-09","storage_af":608101,"elevation_ft":7493.4},{"month":"2005-10","storage_af":579765,"elevation_ft":7489.8},{"month":"2005-11","storage_af":579833,"elevation_ft":7489.8},{"month":"2005-12","storage_af":580266,"elevation_ft":7489.9},{"month":"2006-01","storage_af":578851,"elevation_ft":7489.7},{"month":"2006-02","storage_af":570239,"elevation_ft":7488.6},{"month":"2006-03","storage_af":567622,"elevation_ft":7488.2},{"month":"2006-04","storage_af":576172,"elevation_ft":7489.3},{"month":"2006-05","storage_af":661512,"elevation_ft":7499.9},{"month":"2006-06","storage_af":800499,"elevation_ft":7516.2},{"month":"2006-07","storage_af":791928,"elevation_ft":7515.2},{"month":"2006-08","storage_af":747183,"elevation_ft":7510.1},{"month":"2006-09","storage_af":687471,"elevation_ft":7503.1},{"month":"2006-10","storage_af":660114,"elevation_ft":7499.8},{"month":"2006-11","storage_af":657212,"elevation_ft":7499.5},{"month":"2006-12","storage_af":615411,"elevation_ft":7494.3},{"month":"2007-01","storage_af":554694,"elevation_ft":7486.5},{"month":"2007-02","storage_af":507692,"elevation_ft":7480.2},{"month":"2007-03","storage_af":497636,"elevation_ft":7478.8},{"month":"2007-04","storage_af":523795,"elevation_ft":7482.4},{"month":"2007-05","storage_af":594754,"elevation_ft":7491.6},{"month":"2007-06","storage_af":738755,"elevation_ft":7509.1},{"month":"2007-07","storage_af":779787,"elevation_ft":7513.9},{"month":"2007-08","storage_af":768328,"elevation_ft":7512.6},{"month":"2007-09","storage_af":715811,"elevation_ft":7506.5},{"month":"2007-10","storage_af":673403,"elevation_ft":7501.5},{"month":"2007-11","storage_af":632929,"elevation_ft":7496.5},{"month":"2007-12","storage_af":597720,"elevation_ft":7492.1},{"month":"2008-01","storage_af":554259,"elevation_ft":7486.5},{"month":"2008-02","storage_af":485816,"elevation_ft":7477.2},{"month":"2008-03","storage_af":441521,"elevation_ft":7470.8},{"month":"2008-04","storage_af":418249,"elevation_ft":7467.4},{"month":"2008-05","storage_af":438108,"elevation_ft":7470.3},{"month":"2008-06","storage_af":577251,"elevation_ft":7489.3},{"month":"2008-07","storage_af":743712,"elevation_ft":7509.7},{"month":"2008-08","storage_af":747585,"elevation_ft":7510.2},{"month":"2008-09","storage_af":687074,"elevation_ft":7503.1},{"month":"2008-10","storage_af":620366,"elevation_ft":7494.9},{"month":"2008-11","storage_af":595450,"elevation_ft":7491.8},{"month":"2008-12","storage_af":587717,"elevation_ft":7490.8},{"month":"2009-01","storage_af":577415,"elevation_ft":7489.5},{"month":"2009-02","storage_af":560332,"elevation_ft":7487.3},{"month":"2009-03","storage_af":547299,"elevation_ft":7485.6},{"month":"2009-04","storage_af":548850,"elevation_ft":7485.8},{"month":"2009-05","storage_af":670677,"elevation_ft":7501.0},{"month":"2009-06","storage_af":813180,"elevation_ft":7517.6},{"month":"2009-07","storage_af":807135,"elevation_ft":7516.9},{"month":"2009-08","storage_af":749645,"elevation_ft":7510.4},{"month":"2009-09","storage_af":684662,"elevation_ft":7502.8},{"month":"2009-10","storage_af":622289,"elevation_ft":7495.2},{"month":"2009-11","storage_af":603850,"elevation_ft":7492.9},{"month":"2009-12","storage_af":589418,"elevation_ft":7491.0},{"month":"2010-01","storage_af":569025,"elevation_ft":7488.4},{"month":"2010-02","storage_af":550690,"elevation_ft":7486.0},{"month":"2010-03","storage_af":543213,"elevation_ft":7485.0},{"month":"2010-04","storage_af":555128,"elevation_ft":7486.6},{"month":"2010-05","storage_af":578386,"elevation_ft":7489.6},{"month":"2010-06","storage_af":702304,"elevation_ft":7504.8},{"month":"2010-07","storage_af":716220,"elevation_ft":7506.5},{"month":"2010-08","storage_af":684155,"elevation_ft":7502.8},{"month":"2010-09","storage_af":636828,"elevation_ft":7497.0},{"month":"2010-10","storage_af":572616,"elevation_ft":7488.9},{"month":"2010-11","storage_af":554210,"elevation_ft":7486.5},{"month":"2010-12","storage_af":556570,"elevation_ft":7486.8},{"month":"2011-01","storage_af":554653,"elevation_ft":7486.5},{"month":"2011-02","storage_af":544363,"elevation_ft":7485.2},{"month":"2011-03","storage_af":514095,"elevation_ft":7481.1},{"month":"2011-04","storage_af":482821,"elevation_ft":7476.8},{"month":"2011-05","storage_af":473517,"elevation_ft":7475.5},{"month":"2011-06","storage_af":607211,"elevation_ft":7493.1},{"month":"2011-07","storage_af":807687,"elevation_ft":7517.0},{"month":"2011-08","storage_af":787551,"elevation_ft":7514.7},{"month":"2011-09","storage_af":726375,"elevation_ft":7507.7},{"month":"2011-10","storage_af":667090,"elevation_ft":7500.7},{"month":"2011-11","storage_af":641851,"elevation_ft":7497.6},{"month":"2011-12","storage_af":603214,"elevation_ft":7492.8},{"month":"2012-01","storage_af":556683,"elevation_ft":7486.8},{"month":"2012-02","storage_af":537823,"elevation_ft":7484.3},{"month":"2012-03","storage_af":532797,"elevation_ft":7483.6},{"month":"2012-04","storage_af":539158,"elevation_ft":7484.5},{"month":"2012-05","storage_af":528655,"elevation_ft":7483.1},{"month":"2012-06","storage_af":510720,"elevation_ft":7480.6},{"month":"2012-07","storage_af":455297,"elevation_ft":7472.8},{"month":"2012-08","storage_af":408566,"elevation_ft":7465.9},{"month":"2012-09","storage_af":362811,"elevation_ft":7458.6},{"month":"2012-10","storage_af":328253,"elevation_ft":7452.8},{"month":"2012-11","storage_af":325351,"elevation_ft":7452.3},{"month":"2012-12","storage_af":326721,"elevation_ft":7452.5},{"month":"2013-01","storage_af":327543,"elevation_ft":7452.7},{"month":"2013-02","storage_af":328505,"elevation_ft":7452.8},{"month":"2013-03","storage_af":331425,"elevation_ft":7453.3},{"month":"2013-04","storage_af":339142,"elevation_ft":7454.7},{"month":"2013-05","storage_af":358199,"elevation_ft":7457.8},{"month":"2013-06","storage_af":435343,"elevation_ft":7469.9},{"month":"2013-07","storage_af":412206,"elevation_ft":7466.4},{"month":"2013-08","storage_af":374046,"elevation_ft":7460.4},{"month":"2013-09","storage_af":343441,"elevation_ft":7455.4},{"month":"2013-10","storage_af":349878,"elevation_ft":7456.5},{"month":"2013-11","storage_af":358341,"elevation_ft":7457.9},{"month":"2013-12","storage_af":373911,"elevation_ft":7460.4},{"month":"2014-01","storage_af":384977,"elevation_ft":7462.2},{"month":"2014-02","storage_af":393671,"elevation_ft":7463.6},{"month":"2014-03","storage_af":398871,"elevation_ft":7464.4},{"month":"2014-04","storage_af":442571,"elevation_ft":7470.9},{"month":"2014-05","storage_af":580920,"elevation_ft":7489.8},{"month":"2014-06","storage_af":683224,"elevation_ft":7502.6},{"month":"2014-07","storage_af":665476,"elevation_ft":7500.5},{"month":"2014-08","storage_af":648794,"elevation_ft":7498.5},{"month":"2014-09","storage_af":612075,"elevation_ft":7493.9},{"month":"2014-10","storage_af":591273,"elevation_ft":7491.3},{"month":"2014-11","storage_af":592466,"elevation_ft":7491.4},{"month":"2014-12","storage_af":586581,"elevation_ft":7490.7},{"month":"2015-01","storage_af":559335,"elevation_ft":7487.1},{"month":"2015-02","storage_af":545927,"elevation_ft":7485.4},{"month":"2015-03","storage_af":553657,"elevation_ft":7486.4},{"month":"2015-04","storage_af":592493,"elevation_ft":7491.4},{"month":"2015-05","storage_af":616201,"elevation_ft":7494.4},{"month":"2015-06","storage_af":777022,"elevation_ft":7513.4},{"month":"2015-07","storage_af":815813,"elevation_ft":7517.9},{"month":"2015-08","storage_af":792243,"elevation_ft":7515.3},{"month":"2015-09","storage_af":748418,"elevation_ft":7510.3},{"month":"2015-10","storage_af":694049,"elevation_ft":7503.9},{"month":"2015-11","storage_af":669802,"elevation_ft":7501.0},{"month":"2015-12","storage_af":644094,"elevation_ft":7497.9},{"month":"2016-01","storage_af":605933,"elevation_ft":7493.1},{"month":"2016-02","storage_af":573816,"elevation_ft":7489.0},{"month":"2016-03","storage_af":560224,"elevation_ft":7487.3},{"month":"2016-04","storage_af":564715,"elevation_ft":7487.8},{"month":"2016-05","storage_af":571571,"elevation_ft":7488.7},{"month":"2016-06","storage_af":705075,"elevation_ft":7505.1},{"month":"2016-07","storage_af":786934,"elevation_ft":7514.7},{"month":"2016-08","storage_af":742737,"elevation_ft":7509.6},{"month":"2016-09","storage_af":691529,"elevation_ft":7503.6},{"month":"2016-10","storage_af":634307,"elevation_ft":7496.7},{"month":"2016-11","storage_af":604676,"elevation_ft":7493.0},{"month":"2016-12","storage_af":596804,"elevation_ft":7492.0},{"month":"2017-01","storage_af":589898,"elevation_ft":7491.1},{"month":"2017-02","storage_af":580098,"elevation_ft":7489.8},{"month":"2017-03","storage_af":558733,"elevation_ft":7487.1},{"month":"2017-04","storage_af":610557,"elevation_ft":7493.7},{"month":"2017-05","storage_af":672660,"elevation_ft":7501.3},{"month":"2017-06","storage_af":688480,"elevation_ft":7503.1},{"month":"2017-07","storage_af":808174,"elevation_ft":7517.0},{"month":"2017-08","storage_af":816609,"elevation_ft":7518.0},{"month":"2017-09","storage_af":766222,"elevation_ft":7512.3},{"month":"2017-10","storage_af":697489,"elevation_ft":7504.3},{"month":"2017-11","storage_af":662843,"elevation_ft":7500.2},{"month":"2017-12","storage_af":625772,"elevation_ft":7495.6},{"month":"2018-01","storage_af":570192,"elevation_ft":7488.6},{"month":"2018-02","storage_af":551072,"elevation_ft":7486.1},{"month":"2018-03","storage_af":542689,"elevation_ft":7485.0},{"month":"2018-04","storage_af":512829,"elevation_ft":7480.9},{"month":"2018-05","storage_af":503230,"elevation_ft":7479.6},{"month":"2018-06","storage_af":497505,"elevation_ft":7478.8},{"month":"2018-07","storage_af":433166,"elevation_ft":7469.6},{"month":"2018-08","storage_af":366565,"elevation_ft":7459.2},{"month":"2018-09","storage_af":304074,"elevation_ft":7448.4},{"month":"2018-10","storage_af":259744,"elevation_ft":7440.0},{"month":"2018-11","storage_af":249713,"elevation_ft":7438.0},{"month":"2018-12","storage_af":248375,"elevation_ft":7437.7},{"month":"2019-01","storage_af":250664,"elevation_ft":7438.2},{"month":"2019-02","storage_af":249631,"elevation_ft":7438.0},{"month":"2019-03","storage_af":247460,"elevation_ft":7437.5},{"month":"2019-04","storage_af":272598,"elevation_ft":7442.4},{"month":"2019-05","storage_af":417026,"elevation_ft":7467.0},{"month":"2019-06","storage_af":531021,"elevation_ft":7482.9},{"month":"2019-07","storage_af":799607,"elevation_ft":7516.0},{"month":"2019-08","storage_af":800368,"elevation_ft":7516.2},{"month":"2019-09","storage_af":761090,"elevation_ft":7511.7},{"month":"2019-10","storage_af":707062,"elevation_ft":7505.5},{"month":"2019-11","storage_af":659580,"elevation_ft":7499.8},{"month":"2019-12","storage_af":617339,"elevation_ft":7494.6},{"month":"2020-01","storage_af":568766,"elevation_ft":7488.4},{"month":"2020-02","storage_af":543879,"elevation_ft":7485.1},{"month":"2020-03","storage_af":537803,"elevation_ft":7484.3},{"month":"2020-04","storage_af":520841,"elevation_ft":7482.0},{"month":"2020-05","storage_af":528298,"elevation_ft":7483.0},{"month":"2020-06","storage_af":592303,"elevation_ft":7491.4},{"month":"2020-07","storage_af":572706,"elevation_ft":7488.9},{"month":"2020-08","storage_af":527106,"elevation_ft":7482.8},{"month":"2020-09","storage_af":465787,"elevation_ft":7474.3},{"month":"2020-10","storage_af":407772,"elevation_ft":7466.4},{"month":"2020-11","storage_af":391931,"elevation_ft":7464.0},{"month":"2020-12","storage_af":395867,"elevation_ft":7464.6},{"month":"2021-01","storage_af":398775,"elevation_ft":7465.0},{"month":"2021-02","storage_af":401242,"elevation_ft":7465.4},{"month":"2021-03","storage_af":402384,"elevation_ft":7465.6},{"month":"2021-04","storage_af":386538,"elevation_ft":7463.1},{"month":"2021-05","storage_af":346921,"elevation_ft":7456.6},{"month":"2021-06","storage_af":382618,"elevation_ft":7462.5},{"month":"2021-07","storage_af":368297,"elevation_ft":7460.2},{"month":"2021-08","storage_af":334000,"elevation_ft":7454.4},{"month":"2021-09","storage_af":275569,"elevation_ft":7443.5},{"month":"2021-10","storage_af":220832,"elevation_ft":7432.2},{"month":"2021-11","storage_af":214548,"elevation_ft":7430.8},{"month":"2021-12","storage_af":225383,"elevation_ft":7433.2},{"month":"2022-01","storage_af":233959,"elevation_ft":7435.1},{"month":"2022-02","storage_af":238270,"elevation_ft":7436.0},{"month":"2022-03","storage_af":238676,"elevation_ft":7436.1},{"month":"2022-04","storage_af":242752,"elevation_ft":7436.9},{"month":"2022-05","storage_af":293234,"elevation_ft":7446.9},{"month":"2022-06","storage_af":372271,"elevation_ft":7460.8},{"month":"2022-07","storage_af":381040,"elevation_ft":7462.2},{"month":"2022-08","storage_af":353965,"elevation_ft":7457.8},{"month":"2022-09","storage_af":315548,"elevation_ft":7451.1},{"month":"2022-10","storage_af":277069,"elevation_ft":7443.9},{"month":"2022-11","storage_af":274540,"elevation_ft":7443.4},{"month":"2022-12","storage_af":287198,"elevation_ft":7445.9},{"month":"2023-01","storage_af":292770,"elevation_ft":7446.9},{"month":"2023-02","storage_af":296550,"elevation_ft":7447.6},{"month":"2023-03","storage_af":299075,"elevation_ft":7448.1},{"month":"2023-04","storage_af":320257,"elevation_ft":7451.9},{"month":"2023-05","storage_af":468671,"elevation_ft":7475.1},{"month":"2023-06","storage_af":704089,"elevation_ft":7505.3},{"month":"2023-07","storage_af":749196,"elevation_ft":7510.7},{"month":"2023-08","storage_af":717392,"elevation_ft":7507.0},{"month":"2023-09","storage_af":662736,"elevation_ft":7500.5},{"month":"2023-10","storage_af":612059,"elevation_ft":7494.3},{"month":"2023-11","storage_af":590591,"elevation_ft":7491.6},{"month":"2023-12","storage_af":587628,"elevation_ft":7491.3},{"month":"2024-01","storage_af":573226,"elevation_ft":7489.4},{"month":"2024-02","storage_af":563607,"elevation_ft":7488.2},{"month":"2024-03","storage_af":560196,"elevation_ft":7487.7},{"month":"2024-04","storage_af":542865,"elevation_ft":7485.5},{"month":"2024-05","storage_af":534264,"elevation_ft":7484.3},{"month":"2024-06","storage_af":550110,"elevation_ft":7486.3},{"month":"2024-07","storage_af":642045,"elevation_ft":7498.0},{"month":"2024-08","storage_af":598451,"elevation_ft":7492.6},{"month":"2024-09","storage_af":572193,"elevation_ft":7489.3},{"month":"2024-10","storage_af":537222,"elevation_ft":7484.7},{"month":"2024-11","storage_af":520371,"elevation_ft":7482.5},{"month":"2024-12","storage_af":524340,"elevation_ft":7483.0},{"month":"2025-01","storage_af":521922,"elevation_ft":7482.7},{"month":"2025-02","storage_af":512671,"elevation_ft":7481.4},{"month":"2025-03","storage_af":505313,"elevation_ft":7480.4},{"month":"2025-04","storage_af":503183,"elevation_ft":7480.2},{"month":"2025-05","storage_af":521100,"elevation_ft":7482.6},{"month":"2025-06","storage_af":560319,"elevation_ft":7487.7},{"month":"2025-07","storage_af":546830,"elevation_ft":7486.0},{"month":"2025-08","storage_af":489780,"elevation_ft":7478.3},{"month":"2025-09","storage_af":435956,"elevation_ft":7470.6},{"month":"2025-10","storage_af":399351,"elevation_ft":7465.1},{"month":"2025-11","storage_af":399811,"elevation_ft":7465.2},{"month":"2025-12","storage_af":408546,"elevation_ft":7466.5},{"month":"2026-01","storage_af":415627,"elevation_ft":7467.6},{"month":"2026-02","storage_af":414008,"elevation_ft":7467.4},{"month":"2026-03","storage_af":416027,"elevation_ft":7467.7},{"month":"2026-04","storage_af":390711,"elevation_ft":7463.7},{"month":"2026-05","storage_af":351155,"elevation_ft":7457.3},{"month":"2026-06","storage_af":320125,"elevation_ft":7451.9},{"month":"2026-07","storage_af":260213,"elevation_ft":7440.5},{"month":"2026-08","storage_af":207168,"elevation_ft":7429.0},{"month":"2026-09","storage_af":153175,"elevation_ft":7415.7},{"month":"2026-10","storage_af":143581,"elevation_ft":7413.1},{"month":"2026-11","storage_af":163211,"elevation_ft":7418.4}],"seasonal":[{"month":"Jan","avg_cfs":990,"this_year_cfs":363,"last_year_cfs":552},{"month":"Feb","avg_cfs":964,"this_year_cfs":364,"last_year_cfs":616},{"month":"Mar","avg_cfs":1022,"this_year_cfs":680,"last_year_cfs":902},{"month":"Apr","avg_cfs":1219,"this_year_cfs":1403,"last_year_cfs":1062},{"month":"May","avg_cfs":1501,"this_year_cfs":1196,"last_year_cfs":1686},{"month":"Jun","avg_cfs":1717,"this_year_cfs":1613,"last_year_cfs":1522},{"month":"Jul","avg_cfs":1842,"this_year_cfs":1351,"last_year_cfs":1818},{"month":"Aug","avg_cfs":1636,"this_year_cfs":1294,"last_year_cfs":1549},{"month":"Sep","avg_cfs":1429,"this_year_cfs":937,"last_year_cfs":1353},{"month":"Oct","avg_cfs":1131,"this_year_cfs":626,"last_year_cfs":1087},{"month":"Nov","avg_cfs":803,"this_year_cfs":151,"last_year_cfs":373},{"month":"Dec","avg_cfs":951,"this_year_cfs":null,"last_year_cfs":326}],"weekly":{"years":{"1969":[501103,483358,467057,450222,441835,438839,433436,422089,419808,403517,384213,367690,351415,343320,340668,338845,352955,371840,396262,428338,474348,523807,561637,593160,617560,642144,668806,689388,703440,718805,720561,714589,716750,718888,719362,718354,715900,717893,720119,722293,727182,732589,738104,740943,738535,729185,712953,698850,697327,684692,671317,662171,652343],"1970":[647150,633666,623799,609401,588511,575632,550712,520785,489032,456909,434773,419846,413057,404108,405073,407144,410879,428316,480107,562100,668311,742210,785138,804291,818322,823203,830448,823702,821523,824492,823637,820195,810005,801693,799201,799794,807432,817195,813638,807188,800760,790983,782655,772723,760055,748205,735635,727084,712440,699769,682325,659711,647667],"1971":[633947,609117,585246,564248,536575,506642,476106,445459,415846,381252,349102,320788,307846,293516,283468,280965,267743,266209,285256,312245,339384,365204,401707,447111,507273,567042,601178,621101,627147,624770,616760,603525,590664,585578,581427,576511,564633,550095,536852,527448,517513,513570,514690,514426,509964,505478,498409,492516,482455,469678,452342,439917,431077],"1972":[423071,408607,394540,382260,369520,357707,346480,333899,321741,316344,317009,318648,319461,314999,316199,317746,317668,320389,328121,333350,351204,382150,432573,485742,518022,534195,541922,540388,535267,531216,531635,530510,526510,523032,518316,512900,511090,509056,510360,512626,517238,526292,534066,532406,529846,524098,513911,500811,486992,469427,450942,431748,417611],"1973":[401429,373013,352471,341435,333135,326513,321992,316495,314519,313543,311996,308718,308349,307139,305740,305976,305221,313629,327350,377824,436906,471443,502707,582284,644868,704244,758979,794468,820137,828226,824198,816357,799708,780583,765298,751785,734086,724676,717480,714504,713484,712853,721500,730376,725216,716941,701035,690762,677984,664327,643358,614370,598694],"1974":[582460,554726,523550,494870,467888,436583,405528,374045,342678,310743,286068,272980,268732,267410,270729,271234,281231,311128,361349,410440,449890,497770,541243,570532,606209,629855,639707,639163,637889,639185,638295,638805,636341,630417,623433,614837,602576,592658,582822,573070,563511,558793,555611,555350,549139,541713,533585,524300,513862,505021,494114,483247,476431],"1975":[470432,456137,443272,431824,417376,404915,393541,380575,367086,355703,344260,336474,330522,320895,307848,290208,272560,255849,231518,230101,249821,262067,302984,363710,424686,486408,560390,630799,678903,703986,719560,723337,729258,729701,726335,720541,714104,708007,699139,689778,682466,675836,665535,656653,649076,637417,625461,612440,597431,580849,560219,543754,533575],"1976":[520198,500730,488758,478703,468128,455940,450055,445974,443727,438465,434052,430280,425182,423843,427317,431875,432011,439784,454264,471097,500674,526295,561101,600550,620086,634767,643190,644951,644220,643295,644116,644291,642728,640136,635946,629738,621513,613409,607283,605150,599677,594621,589041,582042,574719,565160,556669,546603,532624,517622,502377,489631,479234],"1977":[470734,455781,441242,427826,414556,405129,400881,397873,394298,392772,390045,381733,380023,376461,373695,366154,365176,367188,362238,351907,344014,337658,337079,339807,334118,319647,309945,300302,290576,283917,275706,264883,255490,248176,240771,232656,227788,226014,222452,218794,216223,217367,216044,214841,216429,220216,221720,225100,227748,230829,234509,234583,235328],"1978":[235644,238135,238795,239203,239384,238601,236759,236336,235382,235932,238189,239444,245096,256555,264562,270465,281628,294408,301183,332405,385452,442227,508948,598435,685436,745732,777154,801732,821089,819603,818973,815657,807493,797755,786647,773725,759088,745283,732047,722453,715658,704891,695311,684836,676134,669950,666189,663389,653163,637693,622302,604688,594351],"1979":[583988,566040,550138,532524,513617,493429,471869,445934,416216,389841,364884,339344,316874,295614,279140,271026,272468,277556,283694,293522,353996,447782,528611,608329,680019,732442,786529,808317,816856,820878,817822,809999,802069,794264,781066,766081,750231,734099,716929,701014,686275,673062,669377,665544,663354,659605,659020,653749,637641,620084,603604,589801,579788],"1980":[570175,554570,543815,525829,508643,492320,476451,461942,446259,428596,408046,388549,373833,359765,346353,335745,341055,360536,391820,409968,435535,488410,550574,639296,708609,762897,798078,811260,821482,818525,814269,806008,793602,785554,774853,763000,756537,749870,741774,733582,718038,713352,705667,697997,684158,667013,651172,634048,618369,603219,586175,570865,559104],"1981":[548375,531153,513197,497077,483011,471729,461471,452351,443773,435161,428810,421441,414444,406338,399362,394697,390751,391160,388910,380393,374424,379660,404374,429991,432121,428798,426606,421703,422309,421419,419266,413721,409269,402887,395209,392086,388408,385229,379787,374466,370695,365507,358535,357541,359128,358334,355743,352165,349777,346799,343683,341347,340642],"1982":[339471,337409,336925,336028,324889,312203,297455,281512,265321,251639,238650,228381,221399,217814,214561,221956,230789,257609,292632,314295,342115,395107,452952,515671,578713,636415,681729,700202,709249,711981,717683,717001,716818,721419,731846,734489,734539,734108,736720,737151,735426,732803,727622,723934,718759,705298,696279,680854,664262,649780,633385,618029,607417],"1983":[596709,581765,566912,551124,535803,522294,506986,491186,477317,463404,457356,452074,446714,442399,436867,430751,430580,437002,447562,464345,483615,561281,647129,715784,788018,821299,817691,822658,815713,819487,819839,822970,818211,807164,793509,782115,768977,756015,744510,733951,722897,711958,700935,697201,693227,680938,667434,653023,640403,625792,610643,598807,593614],"1984":[580803,560905,537413,512876,487681,460843,431976,402941,373858,345408,314325,285731,258273,230231,209508,207213,219425,222861,241022,338675,494078,639263,723562,756900,797362,808827,807858,810643,817521,818210,817391,815895,815284,818133,820348,813922,803392,795493,792546,789821,787395,785609,779152,769302,757853,745763,733165,718810,703967,693562,685354,675103,667689],"1985":[655077,630769,603593,576413,548461,519553,491125,463242,434442,409172,383892,365529,351101,337921,338512,350811,352278,367835,432510,479737,520962,589104,651419,727777,773103,780649,787459,789297,792086,796391,792956,784402,774631,763401,751940,742713,734921,729436,729879,726126,722065,713342,702410,691301,678261,665782,653143,641122,627204,611246,593857,577747,567651],"1986":[558954,542220,521494,496632,472102,446281,427729,411755,391528,374911,359576,349559,346248,354037,359200,358642,359535,378340,406037,409735,431181,474961,560603,645193,718220,780074,818943,824880,815674,817976,816273,810666,804203,795520,786938,775541,767160,756403,746728,734556,722165,711253,710280,707555,698768,689227,680138,668082,653073,632719,611886,590247,576841],"1987":[564122,542559,521396,501636,482047,461825,440642,418623,396695,373158,357979,339466,326679,310177,306525,314812,346020,401271,442610,512302,578619,606923,651424,721658,770100,794152,800619,795251,784681,773431,762824,751464,738958,731758,728836,723421,716418,708270,699333,690566,680733,669769,658907,649498,639662,628671,616621,605667,593550,581628,568460,555107,547512],"1988":[539549,526203,513281,502769,489429,475852,462112,449351,436333,423020,411290,397693,387393,378067,376725,379454,378956,375917,375678,382501,401193,414750,438378,472881,492098,506661,518028,520758,517576,507885,502720,498973,491433,484981,478573,473065,464125,460318,453668,447750,444198,440349,438132,437533,440689,443409,446645,450227,451767,452505,454158,457326,458745],"1989":[460456,464821,466817,468387,470190,472258,474684,477399,479838,482944,488431,494569,504301,508571,515095,524049,545578,553372,561622,575017,591740,617014,637619,655786,671647,675137,672520,666687,660525,654678,656246,654258,649601,643579,633274,623121,610948,599087,589341,581036,570834,565006,561272,556353,555546,556842,559426,560605,561108,561633,563132,564337,563657],"1990":[564293,565631,566498,566619,568234,569719,570204,572717,573535,577163,580068,578958,576587,570415,561329,553145,547967,544016,547004,546648,550692,568100,599108,650315,671968,678912,681789,686164,684924,682753,678056,671622,666769,661428,653664,644880,634231,625375,619105,617006,618340,619882,623403,628301,633145,637496,641559,644203,644412,646620,648494,648284,647272],"1991":[644761,642521,640678,639346,637114,634090,630427,628553,627152,628036,625890,626406,628036,634337,643937,649069,661042,664013,674149,702873,736038,769991,790220,815215,824955,819267,815973,816402,814076,812376,806539,800080,790629,777418,763380,747527,733362,717531,707607,689686,679449,665160,653466,642615,636756,629854,623770,616894,607452,597964,587452,577788,571350],"1992":[565930,554256,545677,540338,535752,530915,527183,524924,522987,520557,518880,517438,516838,517806,523932,537490,546671,562000,583882,587676,592835,620537,645316,669470,685571,696253,698584,695049,690565,686296,684614,676870,668115,657489,646774,637857,628729,620499,611992,601272,591567,583594,577341,570867,570116,574430,578415,580512,581612,583102,584305,583648,581929],"1993":[581045,581023,580978,580689,580801,579923,576233,571396,557070,533732,508474,485519,468298,450475,433833,419597,411476,414198,413309,449069,521206,602225,658017,689170,739634,776664,801334,809074,813116,811560,807005,800851,795096,786900,777516,766207,752861,741082,726632,716285,709736,705569,701212,689108,677179,668704,659705,648264,639593,631947,616786,601411,595106],"1994":[589677,576559,568311,567047,561568,559852,559000,560408,561764,562639,566213,571449,569588,566849,561306,562422,575163,581301,590774,610288,627749,653955,702818,729297,746003,755126,749585,737156,724075,711508,703782,695808,685117,674184,659086,646381,634472,625730,618924,615399,614182,611274,604465,601699,601880,602760,600381,595241,592527,587383,583703,580790,579557],"1995":[576477,572839,570678,569477,572563,571096,568421,567497,565401,568146,560002,551052,541032,528674,521700,507150,480551,461352,438851,434218,451603,461290,496260,573775,700138,780519,814558,822983,812748,803184,796096,791317,788530,792111,796326,795967,789899,784170,783916,775541,766367,756778,742939,728214,709842,694646,681817,667859,653362,634935,615274,595981,586411],"1996":[576221,556894,545311,539813,534971,529298,528692,522818,516756,513708,511006,504345,488861,480031,485965,492088,490175,504976,535968,594683,669646,705213,745750,803937,822395,817210,810173,799506,790946,786451,779862,770890,759644,748132,736895,722399,708333,696182,689811,684673,682182,677593,671574,665062,658062,650045,644239,639069,632339,624561,616370,607894,602156],"1997":[596962,587096,571758,554477,537527,521659,501863,482040,463795,447124,418084,385571,354150,332678,311771,301987,319463,335574,370758,437023,513472,560109,653055,735645,787659,814519,810748,796396,788581,792956,799706,804550,805492,800092,791026,778066,765700,759576,761894,758750,753891,741087,722901,710793,699551,688176,674351,659566,644733,626104,608312,589146,578392],"1998":[568146,551793,540900,529866,518590,507688,495992,483936,471551,462911,456458,450365,452210,448278,444353,440728,445278,464055,489434,511636,531494,555393,596860,615451,631958,659727,679667,694908,696756,697634,701271,699415,693862,686130,677061,667125,655769,643036,629742,620019,617872,611036,604218,599333,598117,598781,597904,595398,588680,584015,582335,578703,577927],"1999":[576133,572696,569642,568223,565916,564687,561950,557899,555883,554687,554535,556461,557136,552105,541940,537570,536553,536018,539297,546816,569318,594807,632331,678349,738997,783538,804605,813661,817795,824904,824683,815534,807910,803660,800285,796545,788583,777173,752228,720323,698142,688581,678012,665512,656668,648170,639314,629129,620158,609619,600281,593627,589147],"2000":[583572,575635,571714,569609,568861,565719,563734,562497,560824,559972,559884,555514,553274,548519,543876,547136,552854,571284,613046,646591,648861,680616,718418,735217,736486,732275,725931,716346,708633,699791,684681,668701,649936,633450,618826,602213,589789,577942,566743,554724,544235,535272,526272,520452,517196,516764,516375,514862,512409,509991,507590,506141,504756],"2001":[503354,500968,498185,495574,493413,491780,490703,489514,488644,487234,482649,479250,477338,474141,466929,459683,456498,464204,478017,508578,547397,594302,631046,656313,667831,673964,675433,672532,669672,664320,660172,658307,657323,653382,644057,633483,621657,610232,600237,590359,578774,569545,561755,555416,553970,554720,553340,550292,549621,547944,546972,544986,544264],"2002":[541971,540531,537784,535515,533165,530223,527247,524977,522088,520367,519218,518343,513961,516167,516313,512912,506850,499893,492861,486101,483809,481684,488390,481090,468086,452615,435702,417733,400034,384740,369499,359298,346286,333250,319796,307546,300082,294159,282196,272320,268068,263867,264056,267036,269306,272284,274135,277390,279672,280398,281965,282582,283191],"2003":[283719,284791,287040,288576,291293,293018,294634,295992,293103,295670,302089,308497,310596,306719,300782,300664,297323,300198,299575,304475,340542,409756,470056,498468,511761,512891,504094,490395,476625,465871,455218,442618,429647,416494,405345,397017,396860,394533,389233,383254,377304,370253,369069,364461,365454,367227,368567,369839,371686,373105,374262,375970,376564],"2004":[377666,379080,380498,382026,383235,384994,386478,388165,389955,391813,395592,404741,417264,425865,437849,446706,451846,455875,473642,501008,527922,556988,584806,616102,630924,634978,636896,629441,621572,616506,609265,599460,586685,573749,560611,546589,532797,520392,510142,495340,483851,480386,478511,479524,481959,485500,490550,493649,490150,490620,491769,491841,492026],"2005":[493146,493084,489617,487071,484502,480914,474265,467190,458263,451299,446378,434272,422580,408829,391740,380660,379371,370276,361678,357811,405240,474027,513613,539476,575839,619584,644683,651048,649380,648738,645924,643821,641594,638086,631397,621920,611174,601174,592630,585030,581135,578370,576156,576465,578670,580935,581000,580622,580756,579722,580067,580312,581269],"2006":[581013,580812,579425,576044,573723,571758,568345,568993,569290,568751,567960,566904,565983,564030,567698,578706,592041,609717,627327,649598,703134,751338,785808,811690,813220,810018,802797,799231,788865,779585,769704,759491,748432,734975,721535,703099,690675,678938,669483,662533,661169,660934,657159,657885,660981,660829,654948,647136,633979,620697,608090,595122,587427],"2007":[578887,564430,550332,536955,523173,511981,505673,501953,496474,489668,491013,502580,511426,516597,523358,526631,528585,544113,560632,592909,636425,665410,702591,735410,767112,783981,785750,781271,776234,775892,776222,776158,771343,762926,751216,737835,720716,705829,689935,691548,682889,670396,658545,648367,641247,633757,626362,617054,609219,601116,593313,585064,580567],"2008":[575470,566437,553096,535664,518844,502734,484647,469026,455365,449222,436138,434632,441272,431648,421400,410882,411187,410051,411717,429011,470650,472586,509701,553153,606897,667736,715515,742122,751201,758164,761280,757187,752110,741849,728018,712485,697003,678932,660203,644104,629294,617681,606832,598478,597195,596274,594377,592471,591116,589248,586646,584449,583447],"2009":[581979,580201,577041,573446,569115,564041,560125,555993,551235,549015,546734,546464,544286,539726,539683,545194,567269,596178,629645,661452,726637,776629,804464,813285,821236,826538,823794,811717,803520,792804,782138,768046,751047,732161,712790,698273,694714,680305,659277,642005,628384,618320,608530,603482,603697,604273,603923,603200,597197,590367,586178,581757,579246],"2010":[577362,572398,567509,562716,558662,554209,549611,546550,544932,543693,542821,542670,542681,540424,539029,556568,581728,588119,588812,570151,561698,600888,663466,718315,733161,735573,731218,722983,712091,701635,695494,692458,685342,677606,667115,654426,640154,626349,619106,597298,580012,565330,556495,552146,553198,554361,555579,555252,555807,556156,557005,557659,557005],"2011":[555405,554904,554546,554187,552558,550184,545376,538281,530247,521890,514727,510046,498676,490264,482235,478005,480030,471632,470875,473598,472411,492956,535257,587826,653021,716273,776703,818647,827494,817135,804357,800221,790719,776848,762464,745731,729267,719237,702478,689159,674454,662794,651551,644087,643344,642892,641327,636400,624292,609270,594641,580195,574131],"2012":[568787,559864,553753,549005,544491,539855,537538,535248,533101,531213,530745,532791,536575,542057,542735,539824,533923,530692,529510,528287,528096,527215,525825,517937,504952,489606,474601,463283,452235,440821,429816,420562,410550,399495,389407,379704,367916,357307,346297,335784,328258,325271,326235,326930,325281,324000,325459,325990,326227,326325,326922,327290,327507],"2013":[327495,327732,327462,327282,328159,328085,328478,328815,329226,329620,330599,332654,334807,338384,339336,340936,338419,340736,339180,355426,373926,398005,419240,443266,450462,442694,431305,417136,406225,396317,389008,382242,375665,366246,356032,345961,338910,340182,346048,348867,350901,350883,349368,349496,353139,357655,363070,366974,369900,371853,375484,379090,380926],"2014":[382196,384195,385479,386649,388887,391060,393959,396613,398774,400895,393926,396543,405253,410982,422034,443894,488672,517997,551995,575639,620924,674855,701514,692196,673416,659127,659539,668256,671029,664780,662320,658859,650839,639604,629969,620100,615639,607487,600911,597174,590836,589058,589684,587929,589930,593536,594096,595656,594556,590032,583159,577639,574440],"2015":[570799,565106,557019,549665,546475,545622,545806,546065,546572,546615,548204,557501,569417,579459,592679,601880,597713,599469,605019,612730,627838,655691,719337,795134,827233,818356,820466,823780,813848,808076,805066,801341,794443,784377,773315,763465,752050,741278,730901,717116,701687,688092,678307,673040,673336,673099,667418,660149,656480,650034,639442,629233,624480],"2016":[619541,611320,602897,596388,589059,581491,573691,566203,559230,557386,559830,561021,563592,559601,560960,568751,567948,570512,578398,576768,563527,570550,619754,701013,752829,782586,795829,796250,786798,776934,764346,755303,745155,733335,722861,711096,697843,685214,671945,658840,644568,631697,619713,609403,606568,605188,603437,601936,598962,597892,596611,594455,592555],"2017":[591463,590545,590534,588343,586612,584740,580390,575392,569643,560238,550976,553007,567197,580182,592031,620271,648342,658365,680203,718196,670042,600616,615843,670510,738188,785043,798883,804643,812675,815388,820021,821364,818797,814648,803896,789024,772069,755522,738837,723403,707222,692510,679273,666993,664966,662943,661216,659045,648874,632022,616535,601255,592594],"2018":[584967,574331,568158,559833,554546,553242,550856,548863,547069,543221,542693,544685,536310,525617,516581,507968,500471,496060,496599,505082,509197,512293,509783,501924,492137,475777,458722,441974,426083,410277,395580,382075,366805,351512,335963,318009,305558,297056,288314,273192,262739,256788,251239,247948,249030,250521,250542,249939,249421,247635,247628,248276,248806],"2019":[248953,250192,251440,251658,251897,251096,249310,247962,247795,246905,246946,247036,248974,251176,260116,271229,302263,352661,385548,431528,464884,447926,440239,487258,589460,672367,755451,801410,820690,826892,818580,808517,801523,789606,785285,777402,765477,753808,741367,727209,715033,703446,692473,680567,669863,659002,650453,643021,636330,625138,610042,595471,587505],"2020":[582092,573536,566335,559111,553536,547178,543209,539919,537110,536531,538063,539929,537186,531480,526940,518389,509930,513348,524535,531661,529076,545895,579033,598189,603448,598300,589954,579683,568469,559710,554287,543817,529826,515448,499879,484174,472494,460036,446389,429789,416869,404740,394684,389041,389412,391508,393429,395227,395199,395565,395885,396591,396898],"2021":[397673,398058,399014,399796,400229,400995,401521,401770,401170,402519,403834,403287,400000,395996,393483,385856,372177,362003,351838,336620,340035,349732,370293,388766,393082,391717,385518,373938,361690,353898,349750,344549,335495,324901,312730,298659,281656,264768,247877,233416,224291,217944,212568,209539,212028,214227,216962,219328,221217,224698,227130,229255,230874],"2022":[231938,233090,234239,235556,236470,236964,238042,239652,240748,240870,238211,236404,238237,240998,242463,240103,246516,257551,275888,298291,314110,334454,354352,375296,386046,389911,390717,385713,378677,371348,367155,361190,352340,346992,342229,333980,319203,306119,295904,287704,281477,274679,269149,267049,269607,274241,278439,281880,284722,287087,288248,289758,290172],"2023":[290586,291695,293268,294451,295378,296383,297192,296864,296307,296742,298607,300618,302421,301580,305981,326160,344323,380860,433658,468948,516294,587585,649716,707883,750256,755584,747131,754344,752960,745566,737719,728997,717807,705914,695334,682742,669773,653669,636720,622720,616776,611433,603531,595491,590439,587780,590563,591951,590168,590372,587994,582199,578069],"2024":[576450,574533,572797,571041,568068,565656,563017,561034,561804,561948,560770,561794,555469,545789,538682,540454,544477,550916,553189,549028,521436,484860,482704,534223,583304,621137,649077,654029,644443,630489,615635,604751,597542,592087,589481,583354,575761,568048,561387,556234,547880,535854,524083,515825,517553,520377,521992,524190,524552,524595,523955,524179,524648],"2025":[524659,524126,521931,519166,516302,514608,512695,510227,509405,509068,507774,503966,497084,497908,498928,505948,509332,514376,516207,524661,527405,521463,535482,563957,580991,580139,570049,553074,539832,527892,515703,502850,489086,476976,464066,450046,437941,428048,421176,410355,398396,393046,396966,396407,398610,398683,401475,403546,405021,408227,409773,411992,411664],"2026":[411805,415502,420356,416110,412677,412884,414022,414944,417196,418023,415630,414332,414577,407920,398166,385884,371536,357105,349585,353451,350982,342161,338018,323726,309668,295745,281139,265995,252818,243330,233034,220973,207712,193722,179635,165880,151237,145933,143508,143625,141073,139097,146150,157894,167710,null,null,null,null,null,null,null,null]},"median":[568146,554726,543815,532524,518590,506642,490703,477399,463795,451299,436138,434272,425182,425865,427317,430751,430580,437002,447562,473598,513472,527215,561637,615451,671647,678912,715515,716346,709249,711508,717683,714589,716750,705914,695334,682742,669773,653669,636720,622720,618340,617681,606832,601699,601880,602760,600381,595656,593550,589248,584305,578703,574440]}}</script>
+<script>
+(() => {
+  const D = JSON.parse(document.getElementById('data').textContent);
+  const S = D.summary;
+  const $ = (id) => document.getElementById(id);
+  const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  const int = d3.format(',');
+  const pct = d3.format('.0%');
+  const compact = (v) => new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 }).format(v);
+  const day = (s) => new Date(s + 'T00:00:00Z');
+  const fdate = (s) => d3.utcFormat('%b %-d, %Y')(day(s));
+  const fmd = (s) => d3.utcFormat('%B %-d')(day(s));
+  const fmonth = (s) => d3.utcFormat('%B %Y')(day(s));
+  const ordinal = (n) => { const s = ['th', 'st', 'nd', 'rd'], v = n % 100; return n + (s[(v - 20) % 10] || s[v] || s[0]); };
+  const yearOf = (s) => s.slice(0, 4);
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+  // Masthead + lede
+  $('m-asof').textContent = fdate(S.as_of);
+  $('m-since').textContent = yearOf(S.first_date);
+  const nearLow = S.record_low_date.startsWith(String(S.year));
+  const fraction = (p) => (p < 0.3 ? 'a fifth' : p < 0.4 ? 'a third' : p < 0.6 ? 'half' : p < 0.8 ? 'two-thirds' : 'most');
+  $('lede-h').textContent = S.storage_af <= S.record_low_af ? 'Blue Mesa is at its lowest level ever recorded.' : nearLow ? 'Blue Mesa is near its lowest level ever recorded.' : `Blue Mesa is ${pct(S.pct_of_record_high)} as full as it has ever been.`;
+  $('lede-p').textContent = `The lake holds ${int(S.storage_af)} acre-feet, about ${fraction(S.pct_of_record_high)} of what it held when it was fullest, in ${fmonth(S.record_high_date)}. ` +
+    (nearLow ? `It hit an all-time low on ${fmd(S.record_low_date)} and has come back up only ${int(S.above_low_af)} acre-feet since. ` : '') +
+    `Before ${S.year}, it had never been this low. So far this year the dam has released ${int(S.ytd_af)} acre-feet, ${pct(S.ytd_pct_of_avg)} of normal for this date.`;
+  const flag = $('lede-flag');
+  if (S.storage_af <= S.record_low_af) { flag.textContent = 'At an all-time low'; flag.hidden = false; }
+  else if (nearLow) { flag.textContent = `All-time low set ${fmd(S.record_low_date)}`; flag.hidden = false; }
+
+  // Gauge: a tank filled to today's storage, scaled to the record high
+  (() => {
+    const svg = d3.select('#gauge');
+    const W = 92, H = 240, x0 = 18, w = 56, top = 6, bottom = H - 6;
+    const y = d3.scaleLinear([0, S.record_high_af], [bottom, top]);
+    svg.append('rect').attr('x', x0).attr('y', top).attr('width', w).attr('height', bottom - top).attr('rx', 8).attr('fill', 'var(--line-2)').attr('stroke', 'var(--line)');
+    const fill = svg.append('rect').attr('class', 'fill').attr('x', x0).attr('width', w).attr('rx', 6).attr('fill', 'var(--water)').attr('y', bottom).attr('height', 0);
+    requestAnimationFrame(() => fill.attr('y', y(S.storage_af)).attr('height', bottom - y(S.storage_af)));
+    const mark = (val, color, dash) => {
+      svg.append('line').attr('x1', x0 - 6).attr('x2', x0 + w + 6).attr('y1', y(val)).attr('y2', y(val)).attr('stroke', color).attr('stroke-width', 1.5).attr('stroke-dasharray', dash || null);
+    };
+    mark(S.record_high_af, 'var(--ink-3)');
+    mark(S.record_low_af, 'var(--low)', '4 3');
+    // percent label inside the tank, above the fill
+    svg.append('text').attr('x', x0 + w / 2).attr('y', y(S.storage_af) - 24).attr('text-anchor', 'middle').attr('class', 'strong').style('font-size', '16px').style('font-weight', '700').text(pct(S.pct_of_record_high));
+    svg.append('text').attr('x', x0 + w / 2).attr('y', y(S.storage_af) - 9).attr('text-anchor', 'middle').style('font-size', '11px').text('of fullest');
+    $('g-hi').textContent = compact(S.record_high_af);
+    $('g-hi-l').textContent = `Fullest ever, ${fmonth(S.record_high_date)}`;
+    const nowEl = document.querySelector('.gauge .scale .now');
+    nowEl.style.top = `calc(${((y(S.storage_af) - top) / (bottom - top) * 100).toFixed(2)}% - 10px)`;
+    $('g-now').textContent = int(S.storage_af) + ' af';
+    $('g-now-l').textContent = `Today, ${int(S.elevation_ft)} ft`;
+    $('g-lo').textContent = compact(S.record_low_af);
+    $('g-lo-l').textContent = `Lowest ever, ${fmd(S.record_low_date)}`;
+  })();
+
+  // Three key figures
+  const kpi = (q, a, unit, d) => `<div class="kpi"><div class="q">${q}</div><div class="a">${a}<small>${unit}</small></div><p class="d">${d}</p></div>`;
+  const chg = S.storage_change_af;
+  $('kpis').innerHTML = [
+    kpi('Water in the lake', int(S.storage_af), 'acre-feet',
+      `<b class="${chg < 0 ? 'down' : 'up'}">${chg < 0 ? '▼' : '▲'} ${int(Math.abs(chg))}</b> compared with one year ago`),
+    kpi('Lake level', d3.format(',.1f')(S.elevation_ft), 'feet above sea level',
+      `<b class="down">${S.below_full_ft.toFixed(1)} ft</b> below full pool (${int(S.full_pool_ft)} ft)`),
+    kpi(`Released so far in ${S.year}`, int(S.ytd_af), 'acre-feet',
+      `<b class="down">${pct(S.ytd_pct_of_avg)}</b> of normal for ${fmd(S.as_of)}, the ${ordinal(S.ytd_rank_low)} lowest of ${S.ytd_years} years`),
+  ].join('');
+
+  // Shared helpers
+  const textW = (() => { const c = document.createElement('canvas').getContext('2d'); return (s, font) => { c.font = font || `12px ${css('--sans')}`; return c.measureText(String(s)).width; }; })();
+  const tipFor = (el) => {
+    const t = document.createElement('div'); t.className = 'tip'; t.hidden = true; el.appendChild(t);
+    return {
+      show(px, py, head, lines) {
+        t.innerHTML = `<div class="h">${esc(head)}</div>` + lines.map(([color, text]) => `<div class="r">${color ? `<i class="sw" style="background:${color}"></i>` : ''}<span>${text}</span></div>`).join('');
+        t.hidden = false;
+        const w = t.offsetWidth, W = el.clientWidth;
+        let left = px + 14; if (left + w > W) left = px - w - 14;
+        t.style.left = Math.max(0, left) + 'px'; t.style.top = Math.max(0, py - 12) + 'px';
+      },
+      hide() { t.hidden = true; },
+    };
+  };
+  const grid = (svg, y, ticks, x1, x2) => {
+    svg.append('g').selectAll('line').data(ticks).join('line').attr('x1', x1).attr('x2', x2).attr('y1', (t) => y(t)).attr('y2', (t) => y(t))
+      .attr('stroke', (t) => (t === 0 ? 'var(--axis)' : 'var(--grid)'));
+    svg.append('g').selectAll('text').data(ticks).join('text').attr('x', x1 - 8).attr('y', (t) => y(t)).attr('dy', '0.32em').attr('text-anchor', 'end').text((t) => compact(t));
+  };
+
+  // Annual releases
+  const drawAnnual = () => {
+    const el = $('c-annual'); el.replaceChildren();
+    const rows = D.years, avg = S.avg_year_af;
+    const W = el.clientWidth || 800, H = 300, mt = 18, mb = 26;
+    const y = d3.scaleLinear([0, d3.max(rows, (r) => r.release_af)], [H - mb, mt]).nice();
+    const ticks = y.ticks(5);
+    const ml = d3.max(ticks, (t) => textW(compact(t))) + 10;
+    const avgLabel = `Normal ${compact(avg)}`;
+    const mr = textW(avgLabel) + 12;
+    const x = d3.scaleBand(rows.map((r) => r.year), [ml, W - mr]).paddingInner(0.3).paddingOuter(0.15);
+    const bw = Math.min(24, x.bandwidth());
+    const bx = (r) => x(r.year) + (x.bandwidth() - bw) / 2;
+    const svg = d3.select(el).append('svg').attr('viewBox', `0 0 ${W} ${H}`).attr('role', 'img').attr('aria-label', 'Water released per year');
+    grid(svg, y, ticks, ml, W - mr);
+    const step = W < 560 ? 20 : 10;
+    svg.append('g').selectAll('text').data(rows.filter((r) => r.year % step === 0)).join('text').attr('x', (r) => x(r.year) + x.bandwidth() / 2).attr('y', H - 6).attr('text-anchor', 'middle').text((r) => r.year);
+    const bars = svg.append('g').selectAll('path').data(rows).join('path')
+      .attr('d', (r) => { const x0 = bx(r), y0 = y(r.release_af), y1 = y(0), rr = Math.min(4, bw / 2); return `M${x0},${y1}V${y0 + rr}a${rr},${rr} 0 0 1 ${rr},-${rr}h${bw - 2 * rr}a${rr},${rr} 0 0 1 ${rr},${rr}V${y1}Z`; })
+      .attr('fill', (r) => (r.partial ? 'none' : r.release_af >= avg ? 'var(--water)' : 'var(--muted-bar)'))
+      .attr('stroke', (r) => (r.partial ? 'var(--axis)' : 'none')).attr('stroke-dasharray', (r) => (r.partial ? '3 2' : null)).attr('stroke-width', 1.5);
+    svg.append('line').attr('x1', ml).attr('x2', W - mr).attr('y1', y(avg)).attr('y2', y(avg)).attr('stroke', 'var(--ink-3)').attr('stroke-width', 1.5).attr('stroke-dasharray', '4 3');
+    svg.append('text').attr('x', W - mr + 6).attr('y', y(avg)).attr('dy', '0.32em').text(avgLabel);
+    const most = rows.find((r) => r.year === S.most_year), least = rows.find((r) => r.year === S.least_year), last = rows[rows.length - 1];
+    svg.append('text').attr('class', 'strong').attr('x', bx(most) + bw / 2).attr('y', y(most.release_af) - 8).attr('text-anchor', 'middle').text(`${most.year} · ${compact(most.release_af)}`);
+    svg.append('text').attr('class', 'strong').attr('x', bx(least) + bw / 2).attr('y', y(least.release_af) - 8).attr('text-anchor', 'middle').text(`${least.year} · ${compact(least.release_af)}`);
+    svg.append('text').attr('class', 'strong').attr('x', bx(last) + bw).attr('y', y(last.release_af) - 8).attr('text-anchor', 'end').text(`${last.year} so far · ${compact(last.release_af)}`);
+    const tip = tipFor(el);
+    svg.append('g').selectAll('rect').data(rows).join('rect').attr('x', (r) => x(r.year) - (x.step() - x.bandwidth()) / 2).attr('width', x.step()).attr('y', mt).attr('height', H - mb - mt).attr('fill', 'transparent')
+      .on('pointerenter pointermove', (ev, r) => {
+        bars.attr('opacity', (b) => (b.year === r.year ? 1 : 0.4));
+        const [px, py] = d3.pointer(ev, el);
+        const lines = [[null, `<b>${int(r.release_af)}</b> acre-feet released`]];
+        if (!r.partial) lines.push([null, `${pct(r.release_af / avg)} of a normal year`]);
+        lines.push([null, `Lowest storage that year: ${int(r.min_storage_af)}`]);
+        tip.show(px, py, r.partial ? `${r.year} (so far)` : String(r.year), lines);
+      })
+      .on('pointerleave', () => { bars.attr('opacity', 1); tip.hide(); });
+  };
+
+  // Storage over time
+  let period = 'all';
+  const drawStorage = () => {
+    const el = $('c-storage'); el.replaceChildren();
+    let rows = D.monthly.map((r) => ({ ...r, d: new Date(r.month + '-01T00:00:00Z') }));
+    if (period !== 'all') { const cutoff = d3.utcYear.offset(rows[rows.length - 1].d, -Number(period)); rows = rows.filter((r) => r.d > cutoff); }
+    const W = el.clientWidth || 800, H = 300, mt = 18, mb = 26;
+    const y = d3.scaleLinear([0, d3.max(D.monthly, (r) => r.storage_af)], [H - mb, mt]).nice();
+    const ticks = y.ticks(5);
+    const ml = d3.max(ticks, (t) => textW(compact(t))) + 10;
+    const last = rows[rows.length - 1];
+    const endLabel = `Today ${compact(S.storage_af)}`, lowLabel = `Low ${compact(S.record_low_af)}`;
+    const mr = Math.max(textW(endLabel), textW(lowLabel)) + 14;
+    const x = d3.scaleUtc(d3.extent(rows, (r) => r.d), [ml, W - mr]);
+    const svg = d3.select(el).append('svg').attr('viewBox', `0 0 ${W} ${H}`).attr('role', 'img').attr('aria-label', 'Monthly reservoir storage');
+    const uid = 'fade-' + period;
+    const g = svg.append('defs').append('linearGradient').attr('id', uid).attr('x1', 0).attr('y1', 0).attr('x2', 0).attr('y2', 1);
+    g.append('stop').attr('offset', 0).attr('stop-color', 'var(--water)').attr('stop-opacity', 0.18);
+    g.append('stop').attr('offset', 1).attr('stop-color', 'var(--water)').attr('stop-opacity', 0);
+    grid(svg, y, ticks, ml, W - mr);
+    const span = last.d.getUTCFullYear() - rows[0].d.getUTCFullYear();
+    svg.append('g').selectAll('text').data(x.ticks(W < 560 ? 4 : span <= 6 ? span : 8)).join('text').attr('x', (t) => x(t)).attr('y', H - 6).attr('text-anchor', 'middle').text((t) => d3.utcFormat('%Y')(t));
+    svg.append('path').datum(rows).attr('fill', `url(#${uid})`).attr('d', d3.area().x((r) => x(r.d)).y0(y(0)).y1((r) => y(r.storage_af)));
+    svg.append('line').attr('x1', ml).attr('x2', W - mr).attr('y1', y(S.record_low_af)).attr('y2', y(S.record_low_af)).attr('stroke', 'var(--low)').attr('stroke-width', 1.5).attr('stroke-dasharray', '4 3');
+    svg.append('line').attr('x1', ml).attr('x2', W - mr).attr('y1', y(S.storage_af)).attr('y2', y(S.storage_af)).attr('stroke', 'var(--ink-3)').attr('stroke-width', 1.5).attr('stroke-dasharray', '4 3');
+    svg.append('path').datum(rows).attr('fill', 'none').attr('stroke', 'var(--water)').attr('stroke-width', 2).attr('stroke-linejoin', 'round').attr('stroke-linecap', 'round').attr('d', d3.line().x((r) => x(r.d)).y((r) => y(r.storage_af)));
+    const yEnd = y(S.storage_af), yLow = y(S.record_low_af), close = Math.abs(yEnd - yLow) < 16;
+    svg.append('text').attr('class', 'strong').attr('x', W - mr + 6).attr('y', close ? Math.min(yEnd, yLow) - 8 : yEnd).attr('dy', '0.32em').text(endLabel);
+    svg.append('text').attr('class', 'lowtext').attr('x', W - mr + 6).attr('y', close ? Math.max(yEnd, yLow) + 8 : yLow).attr('dy', '0.32em').text(lowLabel);
+    // record high and record low, marked on the line
+    const peak = rows.find((r) => r.month === S.record_high_date.slice(0, 7));
+    if (peak) {
+      svg.append('circle').attr('cx', x(peak.d)).attr('cy', y(peak.storage_af)).attr('r', 4.5).attr('fill', 'var(--panel)').attr('stroke', 'var(--water)').attr('stroke-width', 2);
+      const lbl = `Fullest · ${fmonth(S.record_high_date)} · ${compact(S.record_high_af)}`;
+      const lx = Math.min(Math.max(x(peak.d), ml + textW(lbl) / 2), W - mr - textW(lbl) / 2);
+      svg.append('text').attr('class', 'strong').attr('x', lx).attr('y', y(peak.storage_af) - 12).attr('text-anchor', 'middle').text(lbl);
+    }
+    const trough = rows.find((r) => r.month === S.record_low_date.slice(0, 7));
+    if (trough) {
+      svg.append('circle').attr('cx', x(trough.d)).attr('cy', y(trough.storage_af)).attr('r', 4.5).attr('fill', 'var(--low)').attr('stroke', 'var(--panel)').attr('stroke-width', 2);
+      const lbl = `Lowest · ${fmonth(S.record_low_date)}`;
+      svg.append('text').attr('class', 'lowtext').attr('x', x(trough.d) - 10).attr('y', y(trough.storage_af) + 18).attr('text-anchor', 'end').text(lbl);
+    }
+    const dot = svg.append('circle').attr('r', 5).attr('fill', 'var(--water)').attr('stroke', 'var(--panel)').attr('stroke-width', 2).attr('visibility', 'hidden');
+    const rule = svg.append('line').attr('y1', mt).attr('y2', H - mb).attr('stroke', 'var(--axis)').attr('visibility', 'hidden');
+    const tip = tipFor(el);
+    const bis = d3.bisector((r) => r.d).center;
+    svg.append('rect').attr('x', ml).attr('y', mt).attr('width', W - mr - ml).attr('height', H - mb - mt).attr('fill', 'transparent')
+      .on('pointerenter pointermove', (ev) => {
+        const [px] = d3.pointer(ev, svg.node());
+        const r = rows[bis(rows, x.invert(px))];
+        const cx = x(r.d), cy = y(r.storage_af);
+        dot.attr('cx', cx).attr('cy', cy).attr('visibility', 'visible'); rule.attr('x1', cx).attr('x2', cx).attr('visibility', 'visible');
+        const lines = [[null, `<b>${int(r.storage_af)}</b> acre-feet in the lake`]];
+        if (r.elevation_ft != null) lines.push([null, `Lake level ${d3.format(',.1f')(r.elevation_ft)} ft`]);
+        tip.show(cx, cy, d3.utcFormat('%B %Y')(r.d), lines);
+      })
+      .on('pointerleave', () => { dot.attr('visibility', 'hidden'); rule.attr('visibility', 'hidden'); tip.hide(); });
+  };
+  document.querySelectorAll('.period').forEach((b) => b.addEventListener('click', () => {
+    period = b.dataset.period;
+    document.querySelectorAll('.period').forEach((o) => o.setAttribute('aria-pressed', String(o === b)));
+    drawStorage();
+  }));
+
+  // Every year overlaid, January to December
+  const closeYear = String(S.same_date_year);
+  $('lg-y-this').textContent = S.year; $('lg-y-close').textContent = `${closeYear}, the next-lowest year`;
+  const drawYears = () => {
+    const el = $('c-years'); el.replaceChildren();
+    const years = Object.keys(D.weekly.years), cur = String(S.year);
+    const W = el.clientWidth || 800, H = 320, mt = 18, mb = 26;
+    const allVals = years.flatMap((yr) => D.weekly.years[yr].filter((v) => v != null));
+    const y = d3.scaleLinear([0, d3.max(allVals)], [H - mb, mt]).nice();
+    const ticks = y.ticks(5);
+    const ml = d3.max(ticks, (t) => textW(compact(t))) + 10;
+    const mr = textW(`${cur}`) + 44;
+    const x = d3.scaleLinear([0, 52], [ml, W - mr]);
+    const svg = d3.select(el).append('svg').attr('viewBox', `0 0 ${W} ${H}`).attr('role', 'img').attr('aria-label', 'Every year of lake storage overlaid by week of the year');
+    grid(svg, y, ticks, ml, W - mr);
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    svg.append('g').selectAll('text').data(months.filter((m, i) => W >= 560 || i % 2 === 0)).join('text').attr('x', (m) => x(months.indexOf(m) * 52 / 12 + 52 / 24)).attr('y', H - 6).attr('text-anchor', 'middle').text((m) => m);
+    const line = d3.line().defined((v) => v != null).x((v, i) => x(i)).y((v) => y(v));
+    const g = svg.append('g');
+    const paths = g.selectAll('path').data(years).join('path')
+      .attr('d', (yr) => line(D.weekly.years[yr]))
+      .attr('fill', 'none').attr('stroke-linejoin', 'round').attr('stroke-linecap', 'round')
+      .attr('stroke', (yr) => (yr === cur ? 'var(--water)' : yr === closeYear ? 'var(--rust)' : 'var(--axis)'))
+      .attr('stroke-width', (yr) => (yr === cur ? 3 : yr === closeYear ? 2 : 1))
+      .attr('opacity', (yr) => (yr === cur || yr === closeYear ? 1 : 0.55));
+    g.selectAll('path').filter((yr) => yr === cur || yr === closeYear).raise();
+    svg.append('path').datum(D.weekly.median).attr('d', line).attr('fill', 'none').attr('stroke', 'var(--ink-3)').attr('stroke-width', 1.5).attr('stroke-dasharray', '4 3');
+    const endLabel = (yr, cls) => {
+      const vals = D.weekly.years[yr]; let i = vals.length - 1; while (i >= 0 && vals[i] == null) i--;
+      if (i < 0) return;
+      svg.append('circle').attr('cx', x(i)).attr('cy', y(vals[i])).attr('r', 4).attr('fill', cls === 'watertext' ? 'var(--water)' : 'var(--rust)').attr('stroke', 'var(--panel)').attr('stroke-width', 2);
+      svg.append('text').attr('class', cls).attr('x', x(i) + 8).attr('y', y(vals[i])).attr('dy', '0.32em').text(yr);
+    };
+    endLabel(closeYear, 'rusttext'); endLabel(cur, 'watertext');
+    const mi = D.weekly.median.length - 1;
+    svg.append('text').attr('x', x(mi) + 8).attr('y', y(D.weekly.median[mi])).attr('dy', '0.32em').text('Typical');
+    const tip = tipFor(el);
+    const hover = svg.append('rect').attr('x', ml).attr('y', mt).attr('width', W - mr - ml).attr('height', H - mb - mt).attr('fill', 'transparent');
+    hover.on('pointermove', (ev) => {
+      const [px, py] = d3.pointer(ev, svg.node());
+      const i = Math.max(0, Math.min(52, Math.round(x.invert(px))));
+      let best = null, bd = Infinity;
+      for (const yr of years) { const v = D.weekly.years[yr][i]; if (v == null) continue; const d = Math.abs(y(v) - py); if (d < bd) { bd = d; best = yr; } }
+      if (!best || bd > 24) { paths.attr('opacity', (yr) => (yr === cur || yr === closeYear ? 1 : 0.55)); tip.hide(); return; }
+      paths.attr('opacity', (yr) => (yr === best || yr === cur || yr === closeYear ? 1 : 0.2)).attr('stroke', (yr) => (yr === cur ? 'var(--water)' : yr === closeYear ? 'var(--rust)' : yr === best ? 'var(--ink-2)' : 'var(--axis)')).attr('stroke-width', (yr) => (yr === cur ? 3 : yr === closeYear || yr === best ? 2 : 1));
+      const v = D.weekly.years[best][i];
+      const [tx, ty] = d3.pointer(ev, el);
+      tip.show(tx, ty, `${best}, early ${months[Math.min(11, Math.floor(i * 12 / 52))]}`, [[null, `<b>${int(v)}</b> acre-feet in the lake`], ...(best !== cur && D.weekly.years[cur][i] != null ? [[null, `${cur}: ${int(D.weekly.years[cur][i])}`]] : [])]);
+    }).on('pointerleave', () => {
+      paths.attr('opacity', (yr) => (yr === cur || yr === closeYear ? 1 : 0.55)).attr('stroke', (yr) => (yr === cur ? 'var(--water)' : yr === closeYear ? 'var(--rust)' : 'var(--axis)')).attr('stroke-width', (yr) => (yr === cur ? 3 : yr === closeYear ? 2 : 1));
+      tip.hide();
+    });
+  };
+
+  // Seasonal pattern
+  $('lg-this').textContent = S.year; $('lg-last').textContent = S.year - 1;
+  const drawSeasonal = () => {
+    const el = $('c-seasonal'); el.replaceChildren();
+    const rows = D.seasonal;
+    const W = el.clientWidth || 480, H = 260, mt = 14, mb = 26;
+    const y = d3.scaleLinear([0, d3.max(rows, (r) => Math.max(r.avg_cfs || 0, r.this_year_cfs || 0, r.last_year_cfs || 0))], [H - mb, mt]).nice();
+    const ticks = y.ticks(5);
+    const ml = d3.max(ticks, (t) => textW(int(t))) + 10, mr = 10;
+    const x = d3.scaleBand(rows.map((r) => r.month), [ml, W - mr]).padding(0.3);
+    const bw = Math.min(24, x.bandwidth()), bx = (r) => x(r.month) + (x.bandwidth() - bw) / 2, cx = (r) => x(r.month) + x.bandwidth() / 2;
+    const svg = d3.select(el).append('svg').attr('viewBox', `0 0 ${W} ${H}`).attr('role', 'img').attr('aria-label', 'Average release rate by month');
+    svg.append('g').selectAll('line').data(ticks).join('line').attr('x1', ml).attr('x2', W - mr).attr('y1', (t) => y(t)).attr('y2', (t) => y(t)).attr('stroke', (t) => (t === 0 ? 'var(--axis)' : 'var(--grid)'));
+    svg.append('g').selectAll('text').data(ticks).join('text').attr('x', ml - 8).attr('y', (t) => y(t)).attr('dy', '0.32em').attr('text-anchor', 'end').text((t) => int(t));
+    svg.append('g').selectAll('text').data(rows.filter((r, i) => W >= 440 || i % 2 === 0)).join('text').attr('x', cx).attr('y', H - 6).attr('text-anchor', 'middle').text((r) => r.month);
+    const bars = svg.append('g').selectAll('path').data(rows).join('path')
+      .attr('d', (r) => { const x0 = bx(r), y0 = y(r.avg_cfs), y1 = y(0), rr = Math.min(4, bw / 2); return `M${x0},${y1}V${y0 + rr}a${rr},${rr} 0 0 1 ${rr},-${rr}h${bw - 2 * rr}a${rr},${rr} 0 0 1 ${rr},${rr}V${y1}Z`; })
+      .attr('fill', 'var(--muted-bar)');
+    for (const [k, color] of [['last_year_cfs', 'var(--rust)'], ['this_year_cfs', 'var(--water)']]) {
+      const pts = rows.filter((r) => r[k] != null);
+      svg.append('path').datum(pts).attr('fill', 'none').attr('stroke', color).attr('stroke-width', 2).attr('stroke-linejoin', 'round').attr('stroke-linecap', 'round').attr('d', d3.line().x(cx).y((r) => y(r[k])));
+      svg.append('g').selectAll('circle').data(pts).join('circle').attr('cx', cx).attr('cy', (r) => y(r[k])).attr('r', 4).attr('fill', color).attr('stroke', 'var(--panel)').attr('stroke-width', 2);
+      const lastPt = pts[pts.length - 1];
+      svg.append('text').attr('class', 'strong').attr('x', cx(lastPt) + 8).attr('y', y(lastPt[k]) + (k === 'this_year_cfs' ? 14 : -8)).attr('dy', '0.32em').text(k === 'this_year_cfs' ? S.year : S.year - 1);
+    }
+    const tip = tipFor(el);
+    svg.append('g').selectAll('rect').data(rows).join('rect').attr('x', (r) => x(r.month) - (x.step() - x.bandwidth()) / 2).attr('width', x.step()).attr('y', mt).attr('height', H - mb - mt).attr('fill', 'transparent')
+      .on('pointerenter pointermove', (ev, r) => {
+        bars.attr('opacity', (b) => (b.month === r.month ? 1 : 0.5));
+        const [px, py] = d3.pointer(ev, el);
+        const lines = [[css('--muted-bar'), `Normal: <b>${int(r.avg_cfs)}</b> cfs`]];
+        if (r.this_year_cfs != null) lines.push([css('--water'), `${S.year}: <b>${int(r.this_year_cfs)}</b> cfs`]);
+        if (r.last_year_cfs != null) lines.push([css('--rust'), `${S.year - 1}: <b>${int(r.last_year_cfs)}</b> cfs`]);
+        tip.show(px, py, r.month, lines);
+      })
+      .on('pointerleave', () => { bars.attr('opacity', 1); tip.hide(); });
+  };
+
+  // Table
+  let sort = { key: 'year', dir: 'descending' };
+  const drawTable = () => {
+    const tb = document.querySelector('#t-years tbody'); tb.replaceChildren();
+    const rows = [...D.years].sort((a, b) => (sort.dir === 'ascending' ? a[sort.key] - b[sort.key] : b[sort.key] - a[sort.key]));
+    const max = d3.max(D.years, (r) => r.release_af);
+    for (const r of rows) {
+      const tr = document.createElement('tr');
+      tr.className = [r.partial ? 'partial' : '', r.year === S.most_year ? 'hi' : '', r.year === S.least_year ? 'lo' : ''].join(' ').trim();
+      const td = (html, cls) => { const c = document.createElement('td'); if (cls) c.className = cls; c.innerHTML = html; tr.appendChild(c); };
+      td(r.partial ? `${r.year} so far` : String(r.year));
+      td(`<div class="cell"><span class="barwrap"><span class="bar ${!r.partial && r.release_af >= S.avg_year_af ? 'hi' : ''}" style="width:${(100 * r.release_af / max).toFixed(1)}%"></span></span><span>${int(r.release_af)}</span></div>`);
+      td(int(r.min_storage_af));
+      td(int(r.max_storage_af), 'narrow-hide');
+      tb.appendChild(tr);
+    }
+  };
+  document.querySelectorAll('.sort').forEach((b) => b.addEventListener('click', () => {
+    const key = b.dataset.key;
+    sort = { key, dir: sort.key === key && sort.dir === 'descending' ? 'ascending' : 'descending' };
+    document.querySelectorAll('#t-years th').forEach((th) => { const k = th.querySelector('.sort').dataset.key; if (k === key) th.setAttribute('aria-sort', sort.dir); else th.removeAttribute('aria-sort'); });
+    drawTable();
+  }));
+
+  const drawAll = () => { drawStorage(); drawYears(); drawAnnual(); drawSeasonal(); };
+  drawAll(); drawTable();
+  let raf = 0;
+  new ResizeObserver(() => { cancelAnimationFrame(raf); raf = requestAnimationFrame(drawAll); }).observe(document.querySelector('.wrap'));
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(drawAll);
+  matchMedia('(prefers-color-scheme: dark)').addEventListener('change', drawAll);
+})();
+</script>
+
+</body>
+</html>

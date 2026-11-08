@@ -1,0 +1,642 @@
+<title>Blue Mesa Water Report</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500&family=Source+Sans+3:wght@400;600;700&display=swap">
+<style>
+  /* Layout: one reading column (max 72rem), a status band up top (gauge + takeaway),
+     two rows of question cards, then the charts. Lake-water blue on cool paper. */
+  :root {
+    --bg: #f4f6f8;
+    --panel: #ffffff;
+    --ink: #0f1a24;
+    --ink-2: #4a5663;
+    --ink-3: #7b8794;
+    --line: #dde3e9;
+    --line-2: #eef1f4;
+    --water: #1d6fa3;
+    --water-deep: #134f78;
+    --water-wash: rgba(29, 111, 163, 0.10);
+    --rust: #c75d2c;
+    --low: #c0392b;
+    --low-wash: rgba(192, 57, 43, 0.08);
+    --muted-bar: #c9d2db;
+    --grid: #e6ebf0;
+    --axis: #b6c0ca;
+    --tip-bg: #ffffff;
+    --shadow: 0 6px 24px rgba(15, 26, 36, 0.10);
+    --display: "Fraunces", "Iowan Old Style", Georgia, serif;
+    --sans: "Source Sans 3", "Helvetica Neue", Arial, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --bg: #0f151b; --panel: #161e26; --ink: #eef2f5; --ink-2: #b2bcc6; --ink-3: #7f8b97;
+      --line: #27313b; --line-2: #1f2832; --water: #3b93cf; --water-deep: #6fb3e0;
+      --water-wash: rgba(59, 147, 207, 0.16); --rust: #d8703e; --low: #e66767;
+      --low-wash: rgba(230, 103, 103, 0.10); --muted-bar: #3a4753; --grid: #222c36; --axis: #3f4b57;
+      --tip-bg: #1d2630; --shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #0f151b; --panel: #161e26; --ink: #eef2f5; --ink-2: #b2bcc6; --ink-3: #7f8b97;
+    --line: #27313b; --line-2: #1f2832; --water: #3b93cf; --water-deep: #6fb3e0;
+    --water-wash: rgba(59, 147, 207, 0.16); --rust: #d8703e; --low: #e66767;
+    --low-wash: rgba(230, 103, 103, 0.10); --muted-bar: #3a4753; --grid: #222c36; --axis: #3f4b57;
+    --tip-bg: #1d2630; --shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+  }
+
+  body { background: var(--bg); color: var(--ink); font-family: var(--sans); font-size: 16px; line-height: 1.5; }
+  .wrap { max-width: 72rem; margin-inline: auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 28px 56px; display: flex; flex-direction: column; gap: 40px; }
+  .num { font-variant-numeric: tabular-nums; }
+  h1, h2, h3 { margin: 0; text-wrap: balance; }
+  p { margin: 0; }
+  b { font-weight: 600; color: var(--ink); }
+  a { color: var(--water); }
+
+  /* Masthead */
+  .mast { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 24px; padding-bottom: 16px; border-bottom: 1px solid var(--line); }
+  .mast h1 { font-family: var(--display); font-weight: 400; font-size: clamp(1.9rem, 3.4vw, 2.6rem); line-height: 1.05; letter-spacing: -0.01em; }
+  .mast .sub { color: var(--ink-2); font-size: 0.95rem; margin-top: 6px; }
+  .mast .meta { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 0.8rem; color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.06em; }
+  .mast .meta b { color: var(--ink-2); font-weight: 600; }
+
+  /* Status band */
+  .status { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 32px; align-items: stretch; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 28px; box-shadow: var(--shadow); }
+  @media (max-width: 760px) { .status { grid-template-columns: 1fr; padding: 20px; } }
+  .status .lede { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+  .kicker { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-3); font-weight: 600; }
+  .lede h2 { font-family: var(--display); font-weight: 400; font-size: clamp(1.5rem, 2.6vw, 2.1rem); line-height: 1.2; }
+  .lede h2 .num { font-variant-numeric: lining-nums tabular-nums; }
+  .lede p { color: var(--ink-2); max-width: 60ch; }
+  .lede .flag { display: inline-flex; align-items: center; gap: 8px; align-self: flex-start; padding: 6px 12px; border-radius: 999px; background: var(--low-wash); color: var(--low); font-weight: 600; font-size: 0.85rem; }
+  .lede .flag::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--low); }
+  .gauge { display: grid; grid-template-columns: auto 1fr; gap: 20px; align-items: stretch; min-width: 0; }
+  .gauge svg { display: block; height: 100%; min-height: 220px; width: 92px; overflow: visible; }
+  .gauge .scale { position: relative; font-size: 0.85rem; color: var(--ink-2); min-width: 0; min-height: 220px; }
+  .gauge .scale div { position: absolute; left: 0; display: flex; flex-direction: column; gap: 1px; line-height: 1.25; }
+  .gauge .scale .hi { top: 0; }
+  .gauge .scale .lo { bottom: 0; }
+  .gauge .scale .now { transform: translateY(-100%); }
+  .gauge .scale .v { font-weight: 600; color: var(--ink); }
+  .gauge .scale .now .v { color: var(--water); font-size: 1.05rem; }
+  .gauge .scale .lo .v { color: var(--low); }
+  .gauge .scale small { color: var(--ink-3); font-size: 0.78rem; }
+
+  /* Question cards */
+  .section { display: flex; flex-direction: column; gap: 16px; }
+  .section-head { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+  .section-head h2 { font-family: var(--display); font-weight: 400; font-size: 1.45rem; }
+  .section-head p { color: var(--ink-3); font-size: 0.9rem; }
+  .cards { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+  @media (max-width: 960px) { .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (max-width: 520px) { .cards { grid-template-columns: 1fr; } }
+  .card { background: var(--panel); padding: 20px 22px 22px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+  .card .q { font-size: 0.92rem; color: var(--ink-2); font-weight: 600; }
+  .card .a { font-family: var(--display); font-weight: 400; font-size: 2.1rem; line-height: 1.05; letter-spacing: -0.01em; font-variant-numeric: lining-nums tabular-nums; }
+  .card .a small { font-family: var(--sans); font-size: 0.85rem; color: var(--ink-3); font-weight: 400; margin-left: 6px; letter-spacing: 0; }
+  .card .a.low { color: var(--low); }
+  .card .a.ok { color: var(--water); }
+  .card .why { font-size: 0.9rem; color: var(--ink-2); line-height: 1.5; }
+  .card .why b { font-weight: 600; }
+
+  /* Charts */
+  .charts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+  @media (max-width: 900px) { .charts { grid-template-columns: 1fr; } }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 22px 22px 18px; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+  .panel.wide { grid-column: 1 / -1; }
+  .panel-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: 10px 20px; }
+  .panel h3 { font-size: 1.08rem; font-weight: 600; }
+  .panel .desc { color: var(--ink-3); font-size: 0.88rem; margin-top: 2px; max-width: 64ch; }
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 0.82rem; color: var(--ink-2); align-items: center; }
+  .legend span { display: inline-flex; align-items: center; gap: 7px; }
+  .sw { width: 12px; height: 12px; border-radius: 3px; background: var(--muted-bar); display: inline-block; flex: none; }
+  .sw.water { background: var(--water); }
+  .sw.rust { background: var(--rust); }
+  .sw.line { height: 2px; width: 16px; border-radius: 1px; }
+  .sw.dash { height: 0; width: 16px; border-top: 2px dashed var(--ink-3); background: none; border-radius: 0; }
+  .sw.low { border-top-color: var(--low); }
+  .sw.open { background: none; border: 1.5px dashed var(--axis); }
+  .sw.faint { background: var(--axis); opacity: 0.6; }
+  .kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  @media (max-width: 760px) { .kpis { grid-template-columns: 1fr; } }
+  .kpi { background: var(--panel); padding: 20px 24px 22px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+  .kpi .q { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.07em; color: var(--ink-3); font-weight: 600; }
+  .kpi .a { font-family: var(--display); font-weight: 400; font-size: 2.4rem; line-height: 1.05; letter-spacing: -0.01em; font-variant-numeric: lining-nums tabular-nums; }
+  .kpi .a small { font-family: var(--sans); font-size: 0.9rem; color: var(--ink-3); margin-left: 6px; letter-spacing: 0; }
+  .kpi .d { font-size: 0.92rem; color: var(--ink-2); }
+  .kpi .d b { font-weight: 600; }
+  .kpi .d b.down { color: var(--low); }
+  .kpi .d b.up { color: var(--water); }
+  .chart text.rusttext { fill: var(--rust); font-weight: 600; paint-order: stroke; stroke: var(--panel); stroke-width: 4px; stroke-linejoin: round; }
+  .chart text.watertext { fill: var(--water); font-weight: 600; paint-order: stroke; stroke: var(--panel); stroke-width: 4px; stroke-linejoin: round; }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+  .seg button { font: inherit; font-size: 0.82rem; font-weight: 600; padding: 5px 12px; background: transparent; color: var(--ink-3); border: 0; cursor: pointer; }
+  .seg button + button { border-left: 1px solid var(--line); }
+  .seg button[aria-pressed="true"] { background: var(--water-wash); color: var(--water); }
+  .seg button:focus-visible, .sort:focus-visible { outline: 2px solid var(--water); outline-offset: -2px; }
+  .chart { position: relative; min-height: 300px; }
+  .chart.short { min-height: 260px; }
+  .chart svg { display: block; overflow: visible; width: 100%; }
+  .chart text { fill: var(--ink-3); font-family: var(--sans); font-size: 12px; font-variant-numeric: tabular-nums; }
+  .chart text.strong { fill: var(--ink); font-weight: 600; paint-order: stroke; stroke: var(--panel); stroke-width: 4px; stroke-linejoin: round; }
+  .chart text.lowtext { fill: var(--low); font-weight: 600; }
+  .tip { position: absolute; top: 0; left: 0; pointer-events: none; background: var(--tip-bg); border: 1px solid var(--line); border-radius: 8px; box-shadow: var(--shadow); padding: 8px 10px; font-size: 0.82rem; white-space: nowrap; z-index: 2; color: var(--ink); }
+  .tip .h { color: var(--ink-3); margin-bottom: 3px; }
+  .tip .r { display: flex; align-items: center; gap: 7px; }
+  .tip .r b { font-weight: 600; }
+
+  /* Table */
+  .tablebox { max-height: 26rem; overflow: auto; border: 1px solid var(--line-2); border-radius: 8px; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.88rem; font-variant-numeric: tabular-nums; }
+  th { position: sticky; top: 0; background: var(--panel); text-align: right; border-bottom: 1px solid var(--line); padding: 0; z-index: 1; }
+  th:first-child, td:first-child { text-align: left; }
+  .sort { font: inherit; font-weight: 600; color: var(--ink-2); background: none; border: 0; padding: 9px 12px; cursor: pointer; width: 100%; text-align: inherit; white-space: nowrap; }
+  .sort::after { content: ""; display: inline-block; width: 1ch; margin-left: 4px; }
+  th[aria-sort="ascending"] .sort::after { content: "\2191"; }
+  th[aria-sort="descending"] .sort::after { content: "\2193"; }
+  th[aria-sort] .sort { color: var(--ink); }
+  td { padding: 8px 12px; text-align: right; border-bottom: 1px solid var(--line-2); white-space: nowrap; color: var(--ink-2); }
+  td:first-child { color: var(--ink); font-weight: 600; }
+  tr.partial td { font-style: italic; }
+  tr.hi td:first-child::after { content: " ▲"; color: var(--water); font-size: 0.7em; }
+  tr.lo td:first-child::after { content: " ▼"; color: var(--low); font-size: 0.7em; }
+  .cell { display: flex; align-items: center; justify-content: flex-end; gap: 10px; }
+  .barwrap { flex: 0 0 7rem; display: flex; }
+  .bar { display: inline-block; height: 6px; border-radius: 3px; background: var(--muted-bar); }
+  .bar.hi { background: var(--water); }
+  @media (max-width: 560px) { .narrow-hide { display: none; } .barwrap { flex-basis: 3.5rem; } }
+
+  /* Notes */
+  .notes { border-top: 1px solid var(--line); padding-top: 20px; }
+  .notes summary { cursor: pointer; font-weight: 600; color: var(--ink-2); }
+  .notes dl { display: grid; grid-template-columns: minmax(8rem, max-content) 1fr; gap: 8px 20px; font-size: 0.9rem; margin: 16px 0 0; }
+  .notes dt { font-weight: 600; }
+  .notes dd { margin: 0; color: var(--ink-2); max-width: 70ch; }
+  @media (max-width: 560px) { .notes dl { grid-template-columns: 1fr; } .notes dd { margin-bottom: 8px; } }
+  @media (prefers-reduced-motion: no-preference) {
+    .gauge .fill { transition: height 900ms cubic-bezier(.2,.7,.2,1), y 900ms cubic-bezier(.2,.7,.2,1); }
+  }
+</style>
+
+<div class="wrap">
+  <header class="mast">
+    <div>
+      <h1>Blue Mesa Reservoir</h1>
+      <p class="sub">How much water is in Colorado's largest lake, and how much the dam is letting out.</p>
+    </div>
+    <div class="meta">
+      <span>Data through <b id="m-asof">—</b></span>
+      <span>Records since <b id="m-since">—</b></span>
+      <span>Source <b>U.S. Bureau of Reclamation</b></span>
+    </div>
+  </header>
+
+  <section class="status" aria-label="Current status">
+    <div class="lede">
+      <span class="kicker">Right now</span>
+      <h2 id="lede-h">—</h2>
+      <p id="lede-p">—</p>
+      <span class="flag" id="lede-flag" hidden>—</span>
+    </div>
+    <div class="gauge" aria-label="How full the lake is">
+      <svg id="gauge" viewBox="0 0 92 240" role="img" aria-label="Gauge of lake storage against its record high and low"></svg>
+      <div class="scale">
+        <div class="hi"><span class="v num" id="g-hi">—</span><small id="g-hi-l">Fullest ever</small></div>
+        <div class="now"><span class="v num" id="g-now">—</span><small id="g-now-l">Today</small></div>
+        <div class="lo"><span class="v num" id="g-lo">—</span><small id="g-lo-l">Lowest ever</small></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="cards kpis" id="kpis" aria-label="Key figures"></section>
+
+  <section class="charts">
+    <article class="panel wide" id="p-storage">
+      <div class="panel-head">
+        <div>
+          <h3>Has the lake ever been this low?</h3>
+          <p class="desc">Water in the lake since 1968, in acre-feet. The line marks today's level: before this year it never dropped below it.</p>
+        </div>
+        <div class="legend">
+          <span><i class="sw dash"></i>Today's level</span>
+          <span><i class="sw dash low"></i>All-time low</span>
+          <span class="seg" role="group" aria-label="Time period">
+            <button type="button" class="period" data-period="all" aria-pressed="true">All years</button>
+            <button type="button" class="period" data-period="20" aria-pressed="false">20 years</button>
+            <button type="button" class="period" data-period="5" aria-pressed="false">5 years</button>
+          </span>
+        </div>
+      </div>
+      <div class="chart" id="c-storage"></div>
+    </article>
+
+    <article class="panel wide" id="p-years">
+      <div class="panel-head">
+        <div>
+          <h3>How does this year compare with every other year?</h3>
+          <p class="desc">Each gray line is one year's water level, January to December. Hover a line to see its year.</p>
+        </div>
+        <div class="legend">
+          <span><i class="sw line water"></i><span id="lg-y-this">—</span></span>
+          <span><i class="sw line rust"></i><span id="lg-y-close">—</span></span>
+          <span><i class="sw dash"></i>Typical year</span>
+          <span><i class="sw line faint"></i>All other years</span>
+        </div>
+      </div>
+      <div class="chart" id="c-years"></div>
+    </article>
+
+    <article class="panel wide" id="p-annual">
+      <div class="panel-head">
+        <div>
+          <h3>Which years released the most and least water?</h3>
+          <p class="desc">Total let out of the dam each calendar year, in acre-feet. The last bar is this year so far.</p>
+        </div>
+        <div class="legend">
+          <span><i class="sw water"></i>Above normal</span>
+          <span><i class="sw"></i>Below normal</span>
+          <span><i class="sw open"></i>This year so far</span>
+          <span><i class="sw dash"></i>Normal year</span>
+        </div>
+      </div>
+      <div class="chart" id="c-annual"></div>
+    </article>
+
+    <article class="panel" id="p-seasonal">
+      <div class="panel-head">
+        <div>
+          <h3>When the water goes out</h3>
+          <p class="desc">Average release rate by month, in cubic feet per second (cfs).</p>
+        </div>
+      </div>
+      <div class="legend" id="seasonal-legend">
+        <span><i class="sw"></i>Normal</span>
+        <span><i class="sw line water"></i><span id="lg-this">—</span></span>
+        <span><i class="sw line rust"></i><span id="lg-last">—</span></span>
+      </div>
+      <div class="chart short" id="c-seasonal"></div>
+    </article>
+
+    <article class="panel" id="p-table">
+      <div class="panel-head">
+        <div>
+          <h3>Every year on record</h3>
+          <p class="desc">Click a column to sort. Acre-feet. ▲ most released, ▼ least. This year is in italics.</p>
+        </div>
+      </div>
+      <div class="tablebox">
+        <table id="t-years">
+          <thead>
+            <tr>
+              <th aria-sort="descending"><button type="button" class="sort" data-key="year">Year</button></th>
+              <th><button type="button" class="sort" data-key="release_af">Released</button></th>
+              <th><button type="button" class="sort" data-key="min_storage_af">Lowest storage</button></th>
+              <th class="narrow-hide"><button type="button" class="sort" data-key="max_storage_af">Highest storage</button></th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </article>
+  </section>
+
+  <details class="notes" id="notes">
+    <summary>How these numbers are made</summary>
+    <dl>
+      <dt>Source</dt>
+      <dd>U.S. Bureau of Reclamation, Upper Colorado Region reservoir data for Blue Mesa (site 913): daily total release, storage and lake elevation. Copied on November 7, 2026.</dd>
+      <dt>Acre-foot</dt>
+      <dd>Enough water to cover one acre a foot deep, about 326,000 gallons. One cubic foot per second flowing for a full day is 1.98347 acre-feet, which is how daily release rates become yearly totals.</dd>
+      <dt>Normal year</dt>
+      <dd>The average of every full calendar year on record. "Normal for this date" compares January 1 through today's date in every year.</dd>
+      <dt>Full pool</dt>
+      <dd>7,519.4 feet above sea level. "Fullest ever" is the highest daily storage reading on record, which is lower than the design capacity because the lake has never been filled to the brim.</dd>
+      <dt>Left out</dt>
+      <dd>December 1968, the first month of records. Only years with a release reading on every day count toward the yearly records.</dd>
+      <dt>Downstream</dt>
+      <dd>Blue Mesa is the first of three Aspinall Unit dams on the Gunnison River. Its water flows into Morrow Point and then Crystal, so flows through the Black Canyon are measured below Crystal Dam.</dd>
+    </dl>
+  </details>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<script id="data" type="application/json">/*__DATA__*/</script>
+<script>
+(() => {
+  const D = JSON.parse(document.getElementById('data').textContent);
+  const S = D.summary;
+  const $ = (id) => document.getElementById(id);
+  const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  const int = d3.format(',');
+  const pct = d3.format('.0%');
+  const compact = (v) => new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 }).format(v);
+  const day = (s) => new Date(s + 'T00:00:00Z');
+  const fdate = (s) => d3.utcFormat('%b %-d, %Y')(day(s));
+  const fmd = (s) => d3.utcFormat('%B %-d')(day(s));
+  const fmonth = (s) => d3.utcFormat('%B %Y')(day(s));
+  const ordinal = (n) => { const s = ['th', 'st', 'nd', 'rd'], v = n % 100; return n + (s[(v - 20) % 10] || s[v] || s[0]); };
+  const yearOf = (s) => s.slice(0, 4);
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+  // Masthead + lede
+  $('m-asof').textContent = fdate(S.as_of);
+  $('m-since').textContent = yearOf(S.first_date);
+  const nearLow = S.record_low_date.startsWith(String(S.year));
+  const fraction = (p) => (p < 0.3 ? 'a fifth' : p < 0.4 ? 'a third' : p < 0.6 ? 'half' : p < 0.8 ? 'two-thirds' : 'most');
+  $('lede-h').textContent = S.storage_af <= S.record_low_af ? 'Blue Mesa is at its lowest level ever recorded.' : nearLow ? 'Blue Mesa is near its lowest level ever recorded.' : `Blue Mesa is ${pct(S.pct_of_record_high)} as full as it has ever been.`;
+  $('lede-p').textContent = `The lake holds ${int(S.storage_af)} acre-feet, about ${fraction(S.pct_of_record_high)} of what it held when it was fullest, in ${fmonth(S.record_high_date)}. ` +
+    (nearLow ? `It hit an all-time low on ${fmd(S.record_low_date)} and has come back up only ${int(S.above_low_af)} acre-feet since. ` : '') +
+    `Before ${S.year}, it had never been this low. So far this year the dam has released ${int(S.ytd_af)} acre-feet, ${pct(S.ytd_pct_of_avg)} of normal for this date.`;
+  const flag = $('lede-flag');
+  if (S.storage_af <= S.record_low_af) { flag.textContent = 'At an all-time low'; flag.hidden = false; }
+  else if (nearLow) { flag.textContent = `All-time low set ${fmd(S.record_low_date)}`; flag.hidden = false; }
+
+  // Gauge: a tank filled to today's storage, scaled to the record high
+  (() => {
+    const svg = d3.select('#gauge');
+    const W = 92, H = 240, x0 = 18, w = 56, top = 6, bottom = H - 6;
+    const y = d3.scaleLinear([0, S.record_high_af], [bottom, top]);
+    svg.append('rect').attr('x', x0).attr('y', top).attr('width', w).attr('height', bottom - top).attr('rx', 8).attr('fill', 'var(--line-2)').attr('stroke', 'var(--line)');
+    const fill = svg.append('rect').attr('class', 'fill').attr('x', x0).attr('width', w).attr('rx', 6).attr('fill', 'var(--water)').attr('y', bottom).attr('height', 0);
+    requestAnimationFrame(() => fill.attr('y', y(S.storage_af)).attr('height', bottom - y(S.storage_af)));
+    const mark = (val, color, dash) => {
+      svg.append('line').attr('x1', x0 - 6).attr('x2', x0 + w + 6).attr('y1', y(val)).attr('y2', y(val)).attr('stroke', color).attr('stroke-width', 1.5).attr('stroke-dasharray', dash || null);
+    };
+    mark(S.record_high_af, 'var(--ink-3)');
+    mark(S.record_low_af, 'var(--low)', '4 3');
+    // percent label inside the tank, above the fill
+    svg.append('text').attr('x', x0 + w / 2).attr('y', y(S.storage_af) - 24).attr('text-anchor', 'middle').attr('class', 'strong').style('font-size', '16px').style('font-weight', '700').text(pct(S.pct_of_record_high));
+    svg.append('text').attr('x', x0 + w / 2).attr('y', y(S.storage_af) - 9).attr('text-anchor', 'middle').style('font-size', '11px').text('of fullest');
+    $('g-hi').textContent = compact(S.record_high_af);
+    $('g-hi-l').textContent = `Fullest ever, ${fmonth(S.record_high_date)}`;
+    const nowEl = document.querySelector('.gauge .scale .now');
+    nowEl.style.top = `calc(${((y(S.storage_af) - top) / (bottom - top) * 100).toFixed(2)}% - 10px)`;
+    $('g-now').textContent = int(S.storage_af) + ' af';
+    $('g-now-l').textContent = `Today, ${int(S.elevation_ft)} ft`;
+    $('g-lo').textContent = compact(S.record_low_af);
+    $('g-lo-l').textContent = `Lowest ever, ${fmd(S.record_low_date)}`;
+  })();
+
+  // Three key figures
+  const kpi = (q, a, unit, d) => `<div class="kpi"><div class="q">${q}</div><div class="a">${a}<small>${unit}</small></div><p class="d">${d}</p></div>`;
+  const chg = S.storage_change_af;
+  $('kpis').innerHTML = [
+    kpi('Water in the lake', int(S.storage_af), 'acre-feet',
+      `<b class="${chg < 0 ? 'down' : 'up'}">${chg < 0 ? '▼' : '▲'} ${int(Math.abs(chg))}</b> compared with one year ago`),
+    kpi('Lake level', d3.format(',.1f')(S.elevation_ft), 'feet above sea level',
+      `<b class="down">${S.below_full_ft.toFixed(1)} ft</b> below full pool (${int(S.full_pool_ft)} ft)`),
+    kpi(`Released so far in ${S.year}`, int(S.ytd_af), 'acre-feet',
+      `<b class="down">${pct(S.ytd_pct_of_avg)}</b> of normal for ${fmd(S.as_of)}, the ${ordinal(S.ytd_rank_low)} lowest of ${S.ytd_years} years`),
+  ].join('');
+
+  // Shared helpers
+  const textW = (() => { const c = document.createElement('canvas').getContext('2d'); return (s, font) => { c.font = font || `12px ${css('--sans')}`; return c.measureText(String(s)).width; }; })();
+  const tipFor = (el) => {
+    const t = document.createElement('div'); t.className = 'tip'; t.hidden = true; el.appendChild(t);
+    return {
+      show(px, py, head, lines) {
+        t.innerHTML = `<div class="h">${esc(head)}</div>` + lines.map(([color, text]) => `<div class="r">${color ? `<i class="sw" style="background:${color}"></i>` : ''}<span>${text}</span></div>`).join('');
+        t.hidden = false;
+        const w = t.offsetWidth, W = el.clientWidth;
+        let left = px + 14; if (left + w > W) left = px - w - 14;
+        t.style.left = Math.max(0, left) + 'px'; t.style.top = Math.max(0, py - 12) + 'px';
+      },
+      hide() { t.hidden = true; },
+    };
+  };
+  const grid = (svg, y, ticks, x1, x2) => {
+    svg.append('g').selectAll('line').data(ticks).join('line').attr('x1', x1).attr('x2', x2).attr('y1', (t) => y(t)).attr('y2', (t) => y(t))
+      .attr('stroke', (t) => (t === 0 ? 'var(--axis)' : 'var(--grid)'));
+    svg.append('g').selectAll('text').data(ticks).join('text').attr('x', x1 - 8).attr('y', (t) => y(t)).attr('dy', '0.32em').attr('text-anchor', 'end').text((t) => compact(t));
+  };
+
+  // Annual releases
+  const drawAnnual = () => {
+    const el = $('c-annual'); el.replaceChildren();
+    const rows = D.years, avg = S.avg_year_af;
+    const W = el.clientWidth || 800, H = 300, mt = 18, mb = 26;
+    const y = d3.scaleLinear([0, d3.max(rows, (r) => r.release_af)], [H - mb, mt]).nice();
+    const ticks = y.ticks(5);
+    const ml = d3.max(ticks, (t) => textW(compact(t))) + 10;
+    const avgLabel = `Normal ${compact(avg)}`;
+    const mr = textW(avgLabel) + 12;
+    const x = d3.scaleBand(rows.map((r) => r.year), [ml, W - mr]).paddingInner(0.3).paddingOuter(0.15);
+    const bw = Math.min(24, x.bandwidth());
+    const bx = (r) => x(r.year) + (x.bandwidth() - bw) / 2;
+    const svg = d3.select(el).append('svg').attr('viewBox', `0 0 ${W} ${H}`).attr('role', 'img').attr('aria-label', 'Water released per year');
+    grid(svg, y, ticks, ml, W - mr);
+    const step = W < 560 ? 20 : 10;
+    svg.append('g').selectAll('text').data(rows.filter((r) => r.year % step === 0)).join('text').attr('x', (r) => x(r.year) + x.bandwidth() / 2).attr('y', H - 6).attr('text-anchor', 'middle').text((r) => r.year);
+    const bars = svg.append('g').selectAll('path').data(rows).join('path')
+      .attr('d', (r) => { const x0 = bx(r), y0 = y(r.release_af), y1 = y(0), rr = Math.min(4, bw / 2); return `M${x0},${y1}V${y0 + rr}a${rr},${rr} 0 0 1 ${rr},-${rr}h${bw - 2 * rr}a${rr},${rr} 0 0 1 ${rr},${rr}V${y1}Z`; })
+      .attr('fill', (r) => (r.partial ? 'none' : r.release_af >= avg ? 'var(--water)' : 'var(--muted-bar)'))
+      .attr('stroke', (r) => (r.partial ? 'var(--axis)' : 'none')).attr('stroke-dasharray', (r) => (r.partial ? '3 2' : null)).attr('stroke-width', 1.5);
+    svg.append('line').attr('x1', ml).attr('x2', W - mr).attr('y1', y(avg)).attr('y2', y(avg)).attr('stroke', 'var(--ink-3)').attr('stroke-width', 1.5).attr('stroke-dasharray', '4 3');
+    svg.append('text').attr('x', W - mr + 6).attr('y', y(avg)).attr('dy', '0.32em').text(avgLabel);
+    const most = rows.find((r) => r.year === S.most_year), least = rows.find((r) => r.year === S.least_year), last = rows[rows.length - 1];
+    svg.append('text').attr('class', 'strong').attr('x', bx(most) + bw / 2).attr('y', y(most.release_af) - 8).attr('text-anchor', 'middle').text(`${most.year} · ${compact(most.release_af)}`);
+    svg.append('text').attr('class', 'strong').attr('x', bx(least) + bw / 2).attr('y', y(least.release_af) - 8).attr('text-anchor', 'middle').text(`${least.year} · ${compact(least.release_af)}`);
+    svg.append('text').attr('class', 'strong').attr('x', bx(last) + bw).attr('y', y(last.release_af) - 8).attr('text-anchor', 'end').text(`${last.year} so far · ${compact(last.release_af)}`);
+    const tip = tipFor(el);
+    svg.append('g').selectAll('rect').data(rows).join('rect').attr('x', (r) => x(r.year) - (x.step() - x.bandwidth()) / 2).attr('width', x.step()).attr('y', mt).attr('height', H - mb - mt).attr('fill', 'transparent')
+      .on('pointerenter pointermove', (ev, r) => {
+        bars.attr('opacity', (b) => (b.year === r.year ? 1 : 0.4));
+        const [px, py] = d3.pointer(ev, el);
+        const lines = [[null, `<b>${int(r.release_af)}</b> acre-feet released`]];
+        if (!r.partial) lines.push([null, `${pct(r.release_af / avg)} of a normal year`]);
+        lines.push([null, `Lowest storage that year: ${int(r.min_storage_af)}`]);
+        tip.show(px, py, r.partial ? `${r.year} (so far)` : String(r.year), lines);
+      })
+      .on('pointerleave', () => { bars.attr('opacity', 1); tip.hide(); });
+  };
+
+  // Storage over time
+  let period = 'all';
+  const drawStorage = () => {
+    const el = $('c-storage'); el.replaceChildren();
+    let rows = D.monthly.map((r) => ({ ...r, d: new Date(r.month + '-01T00:00:00Z') }));
+    if (period !== 'all') { const cutoff = d3.utcYear.offset(rows[rows.length - 1].d, -Number(period)); rows = rows.filter((r) => r.d > cutoff); }
+    const W = el.clientWidth || 800, H = 300, mt = 18, mb = 26;
+    const y = d3.scaleLinear([0, d3.max(D.monthly, (r) => r.storage_af)], [H - mb, mt]).nice();
+    const ticks = y.ticks(5);
+    const ml = d3.max(ticks, (t) => textW(compact(t))) + 10;
+    const last = rows[rows.length - 1];
+    const endLabel = `Today ${compact(S.storage_af)}`, lowLabel = `Low ${compact(S.record_low_af)}`;
+    const mr = Math.max(textW(endLabel), textW(lowLabel)) + 14;
+    const x = d3.scaleUtc(d3.extent(rows, (r) => r.d), [ml, W - mr]);
+    const svg = d3.select(el).append('svg').attr('viewBox', `0 0 ${W} ${H}`).attr('role', 'img').attr('aria-label', 'Monthly reservoir storage');
+    const uid = 'fade-' + period;
+    const g = svg.append('defs').append('linearGradient').attr('id', uid).attr('x1', 0).attr('y1', 0).attr('x2', 0).attr('y2', 1);
+    g.append('stop').attr('offset', 0).attr('stop-color', 'var(--water)').attr('stop-opacity', 0.18);
+    g.append('stop').attr('offset', 1).attr('stop-color', 'var(--water)').attr('stop-opacity', 0);
+    grid(svg, y, ticks, ml, W - mr);
+    const span = last.d.getUTCFullYear() - rows[0].d.getUTCFullYear();
+    svg.append('g').selectAll('text').data(x.ticks(W < 560 ? 4 : span <= 6 ? span : 8)).join('text').attr('x', (t) => x(t)).attr('y', H - 6).attr('text-anchor', 'middle').text((t) => d3.utcFormat('%Y')(t));
+    svg.append('path').datum(rows).attr('fill', `url(#${uid})`).attr('d', d3.area().x((r) => x(r.d)).y0(y(0)).y1((r) => y(r.storage_af)));
+    svg.append('line').attr('x1', ml).attr('x2', W - mr).attr('y1', y(S.record_low_af)).attr('y2', y(S.record_low_af)).attr('stroke', 'var(--low)').attr('stroke-width', 1.5).attr('stroke-dasharray', '4 3');
+    svg.append('line').attr('x1', ml).attr('x2', W - mr).attr('y1', y(S.storage_af)).attr('y2', y(S.storage_af)).attr('stroke', 'var(--ink-3)').attr('stroke-width', 1.5).attr('stroke-dasharray', '4 3');
+    svg.append('path').datum(rows).attr('fill', 'none').attr('stroke', 'var(--water)').attr('stroke-width', 2).attr('stroke-linejoin', 'round').attr('stroke-linecap', 'round').attr('d', d3.line().x((r) => x(r.d)).y((r) => y(r.storage_af)));
+    const yEnd = y(S.storage_af), yLow = y(S.record_low_af), close = Math.abs(yEnd - yLow) < 16;
+    svg.append('text').attr('class', 'strong').attr('x', W - mr + 6).attr('y', close ? Math.min(yEnd, yLow) - 8 : yEnd).attr('dy', '0.32em').text(endLabel);
+    svg.append('text').attr('class', 'lowtext').attr('x', W - mr + 6).attr('y', close ? Math.max(yEnd, yLow) + 8 : yLow).attr('dy', '0.32em').text(lowLabel);
+    // record high and record low, marked on the line
+    const peak = rows.find((r) => r.month === S.record_high_date.slice(0, 7));
+    if (peak) {
+      svg.append('circle').attr('cx', x(peak.d)).attr('cy', y(peak.storage_af)).attr('r', 4.5).attr('fill', 'var(--panel)').attr('stroke', 'var(--water)').attr('stroke-width', 2);
+      const lbl = `Fullest · ${fmonth(S.record_high_date)} · ${compact(S.record_high_af)}`;
+      const lx = Math.min(Math.max(x(peak.d), ml + textW(lbl) / 2), W - mr - textW(lbl) / 2);
+      svg.append('text').attr('class', 'strong').attr('x', lx).attr('y', y(peak.storage_af) - 12).attr('text-anchor', 'middle').text(lbl);
+    }
+    const trough = rows.find((r) => r.month === S.record_low_date.slice(0, 7));
+    if (trough) {
+      svg.append('circle').attr('cx', x(trough.d)).attr('cy', y(trough.storage_af)).attr('r', 4.5).attr('fill', 'var(--low)').attr('stroke', 'var(--panel)').attr('stroke-width', 2);
+      const lbl = `Lowest · ${fmonth(S.record_low_date)}`;
+      svg.append('text').attr('class', 'lowtext').attr('x', x(trough.d) - 10).attr('y', y(trough.storage_af) + 18).attr('text-anchor', 'end').text(lbl);
+    }
+    const dot = svg.append('circle').attr('r', 5).attr('fill', 'var(--water)').attr('stroke', 'var(--panel)').attr('stroke-width', 2).attr('visibility', 'hidden');
+    const rule = svg.append('line').attr('y1', mt).attr('y2', H - mb).attr('stroke', 'var(--axis)').attr('visibility', 'hidden');
+    const tip = tipFor(el);
+    const bis = d3.bisector((r) => r.d).center;
+    svg.append('rect').attr('x', ml).attr('y', mt).attr('width', W - mr - ml).attr('height', H - mb - mt).attr('fill', 'transparent')
+      .on('pointerenter pointermove', (ev) => {
+        const [px] = d3.pointer(ev, svg.node());
+        const r = rows[bis(rows, x.invert(px))];
+        const cx = x(r.d), cy = y(r.storage_af);
+        dot.attr('cx', cx).attr('cy', cy).attr('visibility', 'visible'); rule.attr('x1', cx).attr('x2', cx).attr('visibility', 'visible');
+        const lines = [[null, `<b>${int(r.storage_af)}</b> acre-feet in the lake`]];
+        if (r.elevation_ft != null) lines.push([null, `Lake level ${d3.format(',.1f')(r.elevation_ft)} ft`]);
+        tip.show(cx, cy, d3.utcFormat('%B %Y')(r.d), lines);
+      })
+      .on('pointerleave', () => { dot.attr('visibility', 'hidden'); rule.attr('visibility', 'hidden'); tip.hide(); });
+  };
+  document.querySelectorAll('.period').forEach((b) => b.addEventListener('click', () => {
+    period = b.dataset.period;
+    document.querySelectorAll('.period').forEach((o) => o.setAttribute('aria-pressed', String(o === b)));
+    drawStorage();
+  }));
+
+  // Every year overlaid, January to December
+  const closeYear = String(S.same_date_year);
+  $('lg-y-this').textContent = S.year; $('lg-y-close').textContent = `${closeYear}, the next-lowest year`;
+  const drawYears = () => {
+    const el = $('c-years'); el.replaceChildren();
+    const years = Object.keys(D.weekly.years), cur = String(S.year);
+    const W = el.clientWidth || 800, H = 320, mt = 18, mb = 26;
+    const allVals = years.flatMap((yr) => D.weekly.years[yr].filter((v) => v != null));
+    const y = d3.scaleLinear([0, d3.max(allVals)], [H - mb, mt]).nice();
+    const ticks = y.ticks(5);
+    const ml = d3.max(ticks, (t) => textW(compact(t))) + 10;
+    const mr = textW(`${cur}`) + 44;
+    const x = d3.scaleLinear([0, 52], [ml, W - mr]);
+    const svg = d3.select(el).append('svg').attr('viewBox', `0 0 ${W} ${H}`).attr('role', 'img').attr('aria-label', 'Every year of lake storage overlaid by week of the year');
+    grid(svg, y, ticks, ml, W - mr);
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    svg.append('g').selectAll('text').data(months.filter((m, i) => W >= 560 || i % 2 === 0)).join('text').attr('x', (m) => x(months.indexOf(m) * 52 / 12 + 52 / 24)).attr('y', H - 6).attr('text-anchor', 'middle').text((m) => m);
+    const line = d3.line().defined((v) => v != null).x((v, i) => x(i)).y((v) => y(v));
+    const g = svg.append('g');
+    const paths = g.selectAll('path').data(years).join('path')
+      .attr('d', (yr) => line(D.weekly.years[yr]))
+      .attr('fill', 'none').attr('stroke-linejoin', 'round').attr('stroke-linecap', 'round')
+      .attr('stroke', (yr) => (yr === cur ? 'var(--water)' : yr === closeYear ? 'var(--rust)' : 'var(--axis)'))
+      .attr('stroke-width', (yr) => (yr === cur ? 3 : yr === closeYear ? 2 : 1))
+      .attr('opacity', (yr) => (yr === cur || yr === closeYear ? 1 : 0.55));
+    g.selectAll('path').filter((yr) => yr === cur || yr === closeYear).raise();
+    svg.append('path').datum(D.weekly.median).attr('d', line).attr('fill', 'none').attr('stroke', 'var(--ink-3)').attr('stroke-width', 1.5).attr('stroke-dasharray', '4 3');
+    const endLabel = (yr, cls) => {
+      const vals = D.weekly.years[yr]; let i = vals.length - 1; while (i >= 0 && vals[i] == null) i--;
+      if (i < 0) return;
+      svg.append('circle').attr('cx', x(i)).attr('cy', y(vals[i])).attr('r', 4).attr('fill', cls === 'watertext' ? 'var(--water)' : 'var(--rust)').attr('stroke', 'var(--panel)').attr('stroke-width', 2);
+      svg.append('text').attr('class', cls).attr('x', x(i) + 8).attr('y', y(vals[i])).attr('dy', '0.32em').text(yr);
+    };
+    endLabel(closeYear, 'rusttext'); endLabel(cur, 'watertext');
+    const mi = D.weekly.median.length - 1;
+    svg.append('text').attr('x', x(mi) + 8).attr('y', y(D.weekly.median[mi])).attr('dy', '0.32em').text('Typical');
+    const tip = tipFor(el);
+    const hover = svg.append('rect').attr('x', ml).attr('y', mt).attr('width', W - mr - ml).attr('height', H - mb - mt).attr('fill', 'transparent');
+    hover.on('pointermove', (ev) => {
+      const [px, py] = d3.pointer(ev, svg.node());
+      const i = Math.max(0, Math.min(52, Math.round(x.invert(px))));
+      let best = null, bd = Infinity;
+      for (const yr of years) { const v = D.weekly.years[yr][i]; if (v == null) continue; const d = Math.abs(y(v) - py); if (d < bd) { bd = d; best = yr; } }
+      if (!best || bd > 24) { paths.attr('opacity', (yr) => (yr === cur || yr === closeYear ? 1 : 0.55)); tip.hide(); return; }
+      paths.attr('opacity', (yr) => (yr === best || yr === cur || yr === closeYear ? 1 : 0.2)).attr('stroke', (yr) => (yr === cur ? 'var(--water)' : yr === closeYear ? 'var(--rust)' : yr === best ? 'var(--ink-2)' : 'var(--axis)')).attr('stroke-width', (yr) => (yr === cur ? 3 : yr === closeYear || yr === best ? 2 : 1));
+      const v = D.weekly.years[best][i];
+      const [tx, ty] = d3.pointer(ev, el);
+      tip.show(tx, ty, `${best}, early ${months[Math.min(11, Math.floor(i * 12 / 52))]}`, [[null, `<b>${int(v)}</b> acre-feet in the lake`], ...(best !== cur && D.weekly.years[cur][i] != null ? [[null, `${cur}: ${int(D.weekly.years[cur][i])}`]] : [])]);
+    }).on('pointerleave', () => {
+      paths.attr('opacity', (yr) => (yr === cur || yr === closeYear ? 1 : 0.55)).attr('stroke', (yr) => (yr === cur ? 'var(--water)' : yr === closeYear ? 'var(--rust)' : 'var(--axis)')).attr('stroke-width', (yr) => (yr === cur ? 3 : yr === closeYear ? 2 : 1));
+      tip.hide();
+    });
+  };
+
+  // Seasonal pattern
+  $('lg-this').textContent = S.year; $('lg-last').textContent = S.year - 1;
+  const drawSeasonal = () => {
+    const el = $('c-seasonal'); el.replaceChildren();
+    const rows = D.seasonal;
+    const W = el.clientWidth || 480, H = 260, mt = 14, mb = 26;
+    const y = d3.scaleLinear([0, d3.max(rows, (r) => Math.max(r.avg_cfs || 0, r.this_year_cfs || 0, r.last_year_cfs || 0))], [H - mb, mt]).nice();
+    const ticks = y.ticks(5);
+    const ml = d3.max(ticks, (t) => textW(int(t))) + 10, mr = 10;
+    const x = d3.scaleBand(rows.map((r) => r.month), [ml, W - mr]).padding(0.3);
+    const bw = Math.min(24, x.bandwidth()), bx = (r) => x(r.month) + (x.bandwidth() - bw) / 2, cx = (r) => x(r.month) + x.bandwidth() / 2;
+    const svg = d3.select(el).append('svg').attr('viewBox', `0 0 ${W} ${H}`).attr('role', 'img').attr('aria-label', 'Average release rate by month');
+    svg.append('g').selectAll('line').data(ticks).join('line').attr('x1', ml).attr('x2', W - mr).attr('y1', (t) => y(t)).attr('y2', (t) => y(t)).attr('stroke', (t) => (t === 0 ? 'var(--axis)' : 'var(--grid)'));
+    svg.append('g').selectAll('text').data(ticks).join('text').attr('x', ml - 8).attr('y', (t) => y(t)).attr('dy', '0.32em').attr('text-anchor', 'end').text((t) => int(t));
+    svg.append('g').selectAll('text').data(rows.filter((r, i) => W >= 440 || i % 2 === 0)).join('text').attr('x', cx).attr('y', H - 6).attr('text-anchor', 'middle').text((r) => r.month);
+    const bars = svg.append('g').selectAll('path').data(rows).join('path')
+      .attr('d', (r) => { const x0 = bx(r), y0 = y(r.avg_cfs), y1 = y(0), rr = Math.min(4, bw / 2); return `M${x0},${y1}V${y0 + rr}a${rr},${rr} 0 0 1 ${rr},-${rr}h${bw - 2 * rr}a${rr},${rr} 0 0 1 ${rr},${rr}V${y1}Z`; })
+      .attr('fill', 'var(--muted-bar)');
+    for (const [k, color] of [['last_year_cfs', 'var(--rust)'], ['this_year_cfs', 'var(--water)']]) {
+      const pts = rows.filter((r) => r[k] != null);
+      svg.append('path').datum(pts).attr('fill', 'none').attr('stroke', color).attr('stroke-width', 2).attr('stroke-linejoin', 'round').attr('stroke-linecap', 'round').attr('d', d3.line().x(cx).y((r) => y(r[k])));
+      svg.append('g').selectAll('circle').data(pts).join('circle').attr('cx', cx).attr('cy', (r) => y(r[k])).attr('r', 4).attr('fill', color).attr('stroke', 'var(--panel)').attr('stroke-width', 2);
+      const lastPt = pts[pts.length - 1];
+      svg.append('text').attr('class', 'strong').attr('x', cx(lastPt) + 8).attr('y', y(lastPt[k]) + (k === 'this_year_cfs' ? 14 : -8)).attr('dy', '0.32em').text(k === 'this_year_cfs' ? S.year : S.year - 1);
+    }
+    const tip = tipFor(el);
+    svg.append('g').selectAll('rect').data(rows).join('rect').attr('x', (r) => x(r.month) - (x.step() - x.bandwidth()) / 2).attr('width', x.step()).attr('y', mt).attr('height', H - mb - mt).attr('fill', 'transparent')
+      .on('pointerenter pointermove', (ev, r) => {
+        bars.attr('opacity', (b) => (b.month === r.month ? 1 : 0.5));
+        const [px, py] = d3.pointer(ev, el);
+        const lines = [[css('--muted-bar'), `Normal: <b>${int(r.avg_cfs)}</b> cfs`]];
+        if (r.this_year_cfs != null) lines.push([css('--water'), `${S.year}: <b>${int(r.this_year_cfs)}</b> cfs`]);
+        if (r.last_year_cfs != null) lines.push([css('--rust'), `${S.year - 1}: <b>${int(r.last_year_cfs)}</b> cfs`]);
+        tip.show(px, py, r.month, lines);
+      })
+      .on('pointerleave', () => { bars.attr('opacity', 1); tip.hide(); });
+  };
+
+  // Table
+  let sort = { key: 'year', dir: 'descending' };
+  const drawTable = () => {
+    const tb = document.querySelector('#t-years tbody'); tb.replaceChildren();
+    const rows = [...D.years].sort((a, b) => (sort.dir === 'ascending' ? a[sort.key] - b[sort.key] : b[sort.key] - a[sort.key]));
+    const max = d3.max(D.years, (r) => r.release_af);
+    for (const r of rows) {
+      const tr = document.createElement('tr');
+      tr.className = [r.partial ? 'partial' : '', r.year === S.most_year ? 'hi' : '', r.year === S.least_year ? 'lo' : ''].join(' ').trim();
+      const td = (html, cls) => { const c = document.createElement('td'); if (cls) c.className = cls; c.innerHTML = html; tr.appendChild(c); };
+      td(r.partial ? `${r.year} so far` : String(r.year));
+      td(`<div class="cell"><span class="barwrap"><span class="bar ${!r.partial && r.release_af >= S.avg_year_af ? 'hi' : ''}" style="width:${(100 * r.release_af / max).toFixed(1)}%"></span></span><span>${int(r.release_af)}</span></div>`);
+      td(int(r.min_storage_af));
+      td(int(r.max_storage_af), 'narrow-hide');
+      tb.appendChild(tr);
+    }
+  };
+  document.querySelectorAll('.sort').forEach((b) => b.addEventListener('click', () => {
+    const key = b.dataset.key;
+    sort = { key, dir: sort.key === key && sort.dir === 'descending' ? 'ascending' : 'descending' };
+    document.querySelectorAll('#t-years th').forEach((th) => { const k = th.querySelector('.sort').dataset.key; if (k === key) th.setAttribute('aria-sort', sort.dir); else th.removeAttribute('aria-sort'); });
+    drawTable();
+  }));
+
+  const drawAll = () => { drawStorage(); drawYears(); drawAnnual(); drawSeasonal(); };
+  drawAll(); drawTable();
+  let raf = 0;
+  new ResizeObserver(() => { cancelAnimationFrame(raf); raf = requestAnimationFrame(drawAll); }).observe(document.querySelector('.wrap'));
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(drawAll);
+  matchMedia('(prefers-color-scheme: dark)').addEventListener('change', drawAll);
+})();
+</script>
