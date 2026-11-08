@@ -2,7 +2,9 @@
 
 A one-page dashboard showing how much water is in Blue Mesa Reservoir (Gunnison County, Colorado) and how much the dam has released, using every daily reading since December 1968.
 
-Open `index.html` in a browser to view it. It needs no server.
+**[View the live dashboard →](https://eesterlein.github.io/blue-mesa-water-report/)**
+
+You can also open `index.html` in a browser to view it locally. It needs no server.
 
 ## What it shows
 
